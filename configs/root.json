@@ -1,0 +1,18 @@
+{
+ "run_id": "p5main",
+ "model": "unsloth/Qwen3-1.7B",
+ "tasks_dir": "~/llm-overseer-rl/tasks/v2",
+ "pool": "data/train_pool.txt",
+ "pool_sha256": "546e7ea09b396cc718f3f7a7784aebedc3158822ae5519d74c8e31594eba711c",
+ "hard_pool": "data/hard_pool.txt",
+ "hard_pool_sha256": "00f52f47312d7d715e3fce5004f78c5f273d61ec52c1b6dbfc07efffe39a8af7",
+ "val_tasks": "data/val_tasks.txt",
+ "budget_rollouts": 24000,
+ "eval_every_rollouts": 800,
+ "save_gens": 2,
+ "overseer_timeout_s": 1800,
+ "min_free_gb": 12.0,
+ "idle_wait_s": 900,
+ "vllm_util": 0.85,
+ "mem_frac": 0.99
+}

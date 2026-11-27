@@ -1,0 +1,1004 @@
+# Overseer decision log
+
+All 65 decisions the overseer (claude-fable-5-2) made in the main run, in order, built from `results/journal.jsonl` by `results/build_results.py`. Nothing is edited or left out.
+
+After every 800 training rollouts the run stops, the checkpoint is scored on the 398 validation tasks, and the overseer gets a table of training and validation metrics plus its own earlier entries. It answers with one of three decisions:
+
+- **CONTINUE**: train on with the same settings.
+- **NEW_PHASE**: train on from the current checkpoint with new settings.
+- **REVERT**: go back to an earlier checkpoint, with the same or new settings.
+
+It also writes a prediction for the next eval, what would change its mind, and a grade of its previous prediction.
+
+The rollout budget was 24,000 at the start. I extended it by hand three times during the run. Those points are marked below, because the overseer planned around the budget it was shown.
+
+## Summary
+
+| # | Rollouts | Val pass | Decision | Settings changed |
+|---|---|---|---|---|
+| [1](#decision-1) | 800 | 25.4% | CONTINUE | none |
+| [2](#decision-2) | 1,600 | 22.9% | NEW_PHASE | learning rate 2e-05 to 5e-05, group size 4 to 8 |
+| [3](#decision-3) | 2,400 | 26.9% | CONTINUE | none |
+| [4](#decision-4) | 3,200 | 31.2% | CONTINUE | none |
+| [5](#decision-5) | 4,000 | 34.9% | CONTINUE | none |
+| [6](#decision-6) | 4,800 | 31.9% | CONTINUE | none |
+| [7](#decision-7) | 5,600 | 33.4% | CONTINUE | none |
+| [8](#decision-8) | 6,400 | 39.2% | CONTINUE | none |
+| [9](#decision-9) | 7,200 | 39.5% | CONTINUE | none |
+| [10](#decision-10) | 8,000 | 40.2% | NEW_PHASE | hard-task share 0 to 0.25 |
+| [11](#decision-11) | 8,800 | 40.2% | CONTINUE | none |
+| [12](#decision-12) | 9,600 | 44.2% | CONTINUE | none |
+| [13](#decision-13) | 10,400 | 38.4% | REVERT to e12 | learning rate 5e-05 to 3e-05 |
+| [14](#decision-14) | 11,200 | 42.2% | CONTINUE | none |
+| [15](#decision-15) | 12,000 | 44.0% | CONTINUE | none |
+| [16](#decision-16) | 12,800 | 45.2% | CONTINUE | none |
+| [17](#decision-17) | 13,600 | 43.7% | CONTINUE | none |
+| [18](#decision-18) | 14,400 | 43.5% | NEW_PHASE | hard-task share 0.25 to 0.5 |
+| [19](#decision-19) | 15,200 | 44.2% | CONTINUE | none |
+| [20](#decision-20) | 16,000 | 45.0% | CONTINUE | none |
+| [21](#decision-21) | 16,800 | 43.2% | REVERT to e20 | temperature 1 to 0.8 |
+| [22](#decision-22) | 17,600 | 43.2% | REVERT to e20 | learning rate 3e-05 to 1e-05, temperature 0.8 to 1 |
+| [23](#decision-23) | 18,400 | 44.7% | CONTINUE | none |
+| [24](#decision-24) | 19,200 | 41.7% | REVERT to e23 | learning rate 1e-05 to 2e-06 |
+| [25](#decision-25) | 20,000 | 45.5% | CONTINUE | none |
+| [26](#decision-26) | 20,800 | 43.2% | REVERT to e25 | learning rate 2e-06 to 1e-06 |
+| | | | *budget extended by hand* | *24,000 to 36,000 rollouts* |
+| [27](#decision-27) | 21,600 | 42.5% | REVERT to e25 | learning rate 1e-06 to 0.0001 |
+| [28](#decision-28) | 22,400 | 46.0% | CONTINUE | none |
+| [29](#decision-29) | 23,200 | 42.7% | CONTINUE | none |
+| [30](#decision-30) | 24,000 | 50.0% | CONTINUE | none |
+| [31](#decision-31) | 24,800 | 53.3% | CONTINUE | none |
+| [32](#decision-32) | 25,600 | 55.5% | CONTINUE | none |
+| [33](#decision-33) | 26,400 | 62.1% | CONTINUE | none |
+| [34](#decision-34) | 27,200 | 57.8% | CONTINUE | none |
+| [35](#decision-35) | 28,000 | 56.0% | CONTINUE | none |
+| [36](#decision-36) | 28,800 | 60.3% | CONTINUE | none |
+| [37](#decision-37) | 29,600 | 58.5% | CONTINUE | none |
+| [38](#decision-38) | 30,400 | 60.3% | CONTINUE | none |
+| | | | *budget extended by hand* | *36,000 to 48,000 rollouts* |
+| [39](#decision-39) | 31,200 | 63.1% | CONTINUE | none |
+| [40](#decision-40) | 32,000 | 58.5% | CONTINUE | none |
+| [41](#decision-41) | 32,800 | 62.8% | CONTINUE | none |
+| [42](#decision-42) | 33,600 | 64.8% | CONTINUE | none |
+| [43](#decision-43) | 34,400 | 64.1% | CONTINUE | none |
+| [44](#decision-44) | 35,200 | 56.3% | REVERT to e43 | none |
+| [45](#decision-45) | 36,000 | 50.0% | REVERT to e43 | learning rate 0.0001 to 1e-05 |
+| [46](#decision-46) | 36,800 | 65.1% | NEW_PHASE | learning rate 1e-05 to 3e-05 |
+| [47](#decision-47) | 37,600 | 66.3% | CONTINUE | none |
+| | | | *budget extended by hand* | *48,000 to 60,000 rollouts* |
+| [48](#decision-48) | 38,400 | 68.1% | CONTINUE | none |
+| [49](#decision-49) | 39,200 | 70.9% | CONTINUE | none |
+| [50](#decision-50) | 40,000 | 70.9% | CONTINUE | none |
+| [51](#decision-51) | 40,800 | 69.8% | REVERT to e50 | temperature 1 to 1.1 |
+| [52](#decision-52) | 41,600 | 63.8% | REVERT to e51 | temperature 1.1 to 1 |
+| [53](#decision-53) | 42,400 | 69.8% | CONTINUE | none |
+| [54](#decision-54) | 43,200 | 71.4% | NEW_PHASE | learning rate 3e-05 to 5e-05 |
+| [55](#decision-55) | 44,000 | 67.1% | REVERT to e54 | learning rate 5e-05 to 3e-05 |
+| [56](#decision-56) | 44,800 | 71.6% | CONTINUE | none |
+| [57](#decision-57) | 45,600 | 71.4% | CONTINUE | none |
+| [58](#decision-58) | 46,400 | 71.4% | NEW_PHASE | hard-task share 0.5 to 0.75 |
+| [59](#decision-59) | 47,200 | 70.1% | CONTINUE | none |
+| [60](#decision-60) | 48,000 | 69.8% | REVERT to e58 | hard-task share 0.75 to 0.5 |
+| [61](#decision-61) | 48,800 | 68.3% | REVERT to e57 | learning rate 3e-05 to 1e-05 |
+| [62](#decision-62) | 49,600 | 70.9% | REVERT to e57 | learning rate 1e-05 to 3e-05, rollouts per update 16 to 32 |
+| [63](#decision-63) | 50,400 | 70.6% | REVERT to e57 | rollouts per update 32 to 16 |
+| [64](#decision-64) | 51,200 | 74.1% | CONTINUE | none |
+| [65](#decision-65) | 52,000 | 70.1% | REVERT to e64 | none |
+
+The run was stopped by hand at 52,000 rollouts. The final pick is the eval with the best 3-eval mean validation pass rate: e64.
+
+## Full entries
+
+### Decision 1
+
+**CONTINUE** after eval e1 (800 rollouts used, validation pass rate 25.4%). Settings changed: none.
+
+Settings from here: learning rate 2e-05, group size 4, rollouts per update 16, hard-task share 0, temperature 1.
+
+**Reason.** e1 is +2.3+-1.6 over base after only 50 updates, 10 of them warmup: positive but not yet conclusive. Nothing looks unstable: grad norm ~0.15 is far below the clip of 1, and the clip ratio is ~0.005 on both updates. One segment is too little evidence to justify changing knobs, and a config change now would blur attribution. The main headroom is the 52% no-submit share, which the current reward should already push down. Keep the root config and get a second point.
+
+**Prediction.** e2 val lands at 25-28%, at or slightly above e1 and above base. In training, no-submit falls below 50%, pass rises to about 40-43%, reward to about 0.40-0.44. Grad norm and clip ratio stay low (u2 clip under 0.02).
+
+**Would change its mind if.** If e2 falls back to or below base (23.1 or less) with training pass and no-submit flat, I would start a new phase with a higher learning rate (about 4e-05) and possibly G=8 for cleaner advantages. If val drops more than 2 paired SE below e1, or u2 clip ratio jumps above 0.1, I would revert to e1 with a gentler config.
+
+### Decision 2
+
+**NEW_PHASE** after eval e2 (1,600 rollouts used, validation pass rate 22.9%). Settings changed: learning rate 2e-05 to 5e-05, group size 4 to 8.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0, temperature 1.
+
+**Reason.** After 100 updates val is back at base (22.9 vs 23.1) and training reward is flat (0.387 to 0.373). The policy is barely moving: u2 clip ratio (~0.006) equals u1, so first updates shift nothing measurable, and grad norm 0.14 is far below the clip. This meets my stated trigger. Raise the learning rate to 5e-05, keeping optimizer state so no updates go to warmup. G=8 should cut the 27-31% zero-signal groups and give a cleaner per-prompt baseline, especially on low-pass-rate tasks. Other knobs stay, to limit confounding.
+
+**Prediction.** e3 val lands at 24-27%, above e2 and at or above base. u2 clip ratio rises clearly above u1 (about 0.01-0.04), showing the policy now moves. Zero-groups falls to about 10-18% with G=8. Training no-submit drops below 46%, pass reaches 38-42%, and reward 0.39-0.43. Grad norm stays below 0.5.
+
+**Would change its mind if.** If u2 clip ratio exceeds 0.15, or val falls more than 2 paired SE below base, I would revert to e2 with a learning rate near 3e-05. If u2 clip still matches u1 (under 0.01) and training reward stays flat, I would raise the learning rate toward 1e-04. If training pass climbs but val stays flat over two evals, I would lower temperature toward 0.8 to narrow the sampling-versus-greedy gap.
+
+**Grade of its previous prediction.** Mostly wrong. I predicted e2 val at 25-28%; it came in at 22.9, below the range and back at base, so the e1 gain was likely noise. Training pass (36.2% vs predicted 40-43%) and reward (0.373 vs 0.40-0.44) also missed. Correct parts: no-submit fell below 50% (47.8%), and grad norm and clip ratio stayed low.
+
+### Decision 3
+
+**CONTINUE** after eval e3 (2,400 rollouts used, validation pass rate 26.9%). Settings changed: none.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0, temperature 1.
+
+**Reason.** e3 is +4.0+-2.0 over e2 and +3.8+-2.3 over base, the best point so far, and n1 mostly behaved as predicted. But it is one segment, and e1 showed a single gain can vanish. My raise-LR trigger is only half met: u2 clip (0.008) still equals u1, but training reward edged up (0.373 to 0.392) and val, the goal metric, rose. With 16-rollout updates, a higher learning rate amplifies noise as well as signal. Budget is ample (27 evals), so I spend one segment confirming this level before touching knobs.
+
+**Prediction.** e4 val lands at 25-29%, keeping trail-3 at 25-26.3 and above base. Training reward 0.39-0.43, pass 38-42%, no-submit 44-48%, zero-groups 10-16%. u2 clip ratio stays small (0.007-0.02), grad norm below 0.3.
+
+**Would change its mind if.** If e4 val falls to 24.5 or lower while training reward stays under 0.40 and u2 clip stays under 0.01, I start a new phase at learning rate 1e-04 with the optimizer kept. If val drops more than 2 paired SE below base, or u2 clip exceeds 0.15, I revert to e3 at about 3e-05. If training pass climbs while val stays flat over two evals, I lower temperature toward 0.8.
+
+**Grade of its previous prediction.** Mostly right. Val 26.9 fell inside the predicted 24-27 and above base; zero-groups 13.0% inside 10-18%; pass 38.2% and reward 0.392 at the low edge of their ranges; grad norm 0.13 stayed below 0.5. Wrong on two counts: u2 clip ratio (0.0079) still equals u1 rather than rising to 0.01-0.04, so the policy moves less per update than I expected, and no-submit stayed at 48.0% instead of dropping below 46%.
+
+### Decision 4
+
+**CONTINUE** after eval e4 (3,200 rollouts used, validation pass rate 31.2%). Settings changed: none.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0, temperature 1.
+
+**Reason.** n1 is working: e4 is +4.3+-2.6 over e3 and +8.0+-2.8 over base, nearly 3 paired SE. Training agrees for the first time: reward 0.392 to 0.462, pass 38.2% to 44.5%, no-submit 48.0% to 42.1%. Nothing looks unstable: grad norm 0.10, u2 clip 0.007, truncation 2%. The final pick uses a trailing mean of three evals, so sustained evals on a rising path are worth more than a knob change that blurs attribution. No-submit at 42% leaves clear headroom on the easy pool, so hard tasks are not needed yet.
+
+**Prediction.** e5 val lands at 28.5-33%, putting trail-3 at 28.9-30.4. Training reward 0.45-0.52, pass 43-50%, no-submit 37-43%, zero-groups 10-17%. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e5 val falls below 26 (about 2 paired SE under e4) and training reward drops back under 0.42, I revert to e4 with a learning rate near 3e-05. If u2 clip exceeds 0.15, same revert. If training pass keeps climbing while val stays flat over two evals, I lower temperature toward 0.8. If zero-groups rise above 25% from all-pass groups, I add hard_share 0.25.
+
+**Grade of its previous prediction.** Right direction, too cautious. Val 31.2 beat my predicted 25-29, and trail-3 27.0 beat 25-26.3. Training also beat the ranges: reward 0.462 (predicted 0.39-0.43), pass 44.5% (38-42%), no-submit 42.1% (44-48%). In range: zero-groups 14.0%, u2 clip 0.0070 at the low edge, grad norm 0.106. I underestimated how much the 5e-05 phase would compound in its second segment.
+
+### Decision 5
+
+**CONTINUE** after eval e5 (4,000 rollouts used, validation pass rate 34.9%). Settings changed: none.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0, temperature 1.
+
+**Reason.** n1 has now gained three evals in a row: 26.9, 31.2, 34.9. e5 is +11.8+-3.2 over base, well beyond noise. Training agrees: reward 0.462 to 0.487, pass 44.5% to 47.8%, no-submit 42.1% to 40.4%. Nothing looks unstable: grad norm 0.09, u2 clip 0.006 equal to u1, load errors 0.4%. Zero-groups at 11% means the easy pool still gives signal, and 40% no-submit leaves headroom, so hard tasks are not needed. The pick rewards a sustained level, so I keep the working phase rather than add a confound.
+
+**Prediction.** e6 val lands at 33-38%, putting trail-3 at 33.0-34.7. Training reward 0.49-0.55, pass 48-54%, no-submit 35-41%, zero-groups 9-16%, truncation under 5%. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e6 val falls below 29.5 (about 2 paired SE under e5) and training reward drops under 0.45, I revert to e5 with a learning rate near 3e-05. If u2 clip exceeds 0.15, same revert. If training pass keeps climbing while val stays flat over two evals, I lower temperature toward 0.8. If zero-groups rise above 25% from all-pass groups, I add hard_share 0.25.
+
+**Grade of its previous prediction.** Mostly right, val again slightly too cautious. Val 34.9 beat the predicted 28.5-33, and trail-3 31.0 beat 28.9-30.4. All training figures landed in range: reward 0.487 (0.45-0.52), pass 47.8% (43-50%), no-submit 40.4% (37-43%), zero-groups 11.0% (10-17%), u2 clip 0.0064 (under 0.02), grad norm 0.09 (under 0.3). For the second time I underestimated how steadily val climbs in this phase.
+
+### Decision 6
+
+**CONTINUE** after eval e6 (4,800 rollouts used, validation pass rate 31.9%). Settings changed: none.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0, temperature 1.
+
+**Reason.** e6 fell 3.0+-3.1 from e5, under one paired SE, so it is indistinguishable from noise; it is still +8.8+-3.2 over base. Training kept improving and by more than before: reward 0.487 to 0.56, pass 47.8% to 54.6%, no-submit 40.4% to 32.4%. Nothing looks unstable: grad norm 0.09, u2 clip 0.007 equal to u1, truncation 2.6%. My revert trigger (val under 29.5 and reward under 0.45) is not met. Zero-groups at 9% means the easy pool still gives signal. One noisy dip does not justify a confounding knob change.
+
+**Prediction.** e7 val lands at 31-36%, putting trail-3 at 32.6-34.3. Training reward 0.55-0.62, pass 54-60%, no-submit 27-33%, zero-groups 8-15%, truncation under 5%. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e7 val stays at 32 or lower while training pass keeps climbing, that is two evals of training gains without val gains: I start a new phase with temperature near 0.8 and hard_share 0.25. If e7 val falls below 28, I revert to e5 with a learning rate near 3e-05. If u2 clip exceeds 0.15, same revert. If zero-groups rise above 25% from all-pass groups, I add hard_share 0.25.
+
+**Grade of its previous prediction.** Val missed low. Val 31.9 fell below the predicted 33-38, and trail-3 32.7 just under 33.0-34.7. Training did slightly better than predicted: reward 0.56 (0.49-0.55), pass 54.6% (48-54%), no-submit 32.4% (35-41%). In range: zero-groups 9.0% at the low edge, truncation 2.6%, u2 clip 0.0068, grad norm 0.09. After two evals of underestimating val I overcorrected; the drop is within one paired SE, so the val climb is noisier than three straight gains suggested.
+
+### Decision 7
+
+**CONTINUE** after eval e7 (5,600 rollouts used, validation pass rate 33.4%). Settings changed: none.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0, temperature 1.
+
+**Reason.** e7 at 33.4 gives the best trail-3 so far (33.4), +10.3+-3.5 over base. Val has been flat within noise since e5 (34.9, 31.9, 33.4) while training still climbs: pass 54.6% to 57.5%, no-submit 32.4% to 29.6%. Neither trigger fired: val is above 32 and zero-groups (22%) is under 25%. Nothing looks unstable: grad norm 0.09, u2 clip 0.0055. Continuing still trains productively, whereas a hard_share switch on ambiguous evidence risks a revert. No-submit at 30% remains the largest failure bucket, and the easy pool still reduces it.
+
+**Prediction.** e8 val lands at 32-37%, putting trail-3 at 32.4-34.1. Training reward 0.59-0.65, pass 57-63%, no-submit 24-30%, zero-groups 15-27%, truncation under 5%. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e8 val is 34 or lower while training pass rises again, e5 remains the best single eval after three segments of training gains: I start a new phase with hard_share 0.25, optimizer kept, same learning rate. If zero-groups reach 25% or more, same change. If e8 val falls below 28, I revert to e7 with a learning rate near 3e-05. If u2 clip exceeds 0.15, same revert.
+
+**Grade of its previous prediction.** Mostly right. Val 33.4 fell inside the predicted 31-36, and trail-3 33.4 inside 32.6-34.3. Training landed in range: reward 0.59 (0.55-0.62), pass 57.5% (54-60%), no-submit 29.6% (27-33%), truncation 1.9%, u2 clip 0.0055, grad norm 0.098. One miss: zero-groups jumped to 22.0% against a predicted 8-15%, so I did not anticipate how quickly groups would become uniform as easy pass climbed.
+
+### Decision 8
+
+**CONTINUE** after eval e8 (6,400 rollouts used, validation pass rate 39.2%). Settings changed: none.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0, temperature 1.
+
+**Reason.** e8 at 39.2 is the best eval and the best trail-3 (34.8): +5.8+-2.4 over e7 and +16.1+-3.3 over base. Training still climbs: reward 0.59 to 0.617, pass 57.5% to 59.9%, no-submit 29.6% to 25.0%. Neither trigger fired: val is above 34 and zero-groups fell back to 16%. Nothing looks unstable: grad norm 0.08, u2 clip 0.005, load errors 0.1%. The pick rewards a sustained level, so two more evals near 39 are worth more than a knob change now. No-submit at 25% still leaves headroom on the easy pool.
+
+**Prediction.** e9 val lands at 35-40%, putting trail-3 at 35.9-37.5. Training reward 0.62-0.68, pass 60-66%, no-submit 20-26%, zero-groups 14-26%, truncation under 5%. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If zero-groups reach 25% or more, I start a new phase with hard_share 0.25, optimizer kept, same learning rate. If e9 and e10 both come in at 35 or lower while training pass keeps rising, same change. If e9 val falls below 32 with training reward dropping under 0.58, I revert to e8 with a learning rate near 3e-05. If u2 clip exceeds 0.15, same revert.
+
+**Grade of its previous prediction.** Right direction, val too cautious. Val 39.2 beat the predicted 32-37, and trail-3 34.8 beat 32.4-34.1. All training figures landed in range: reward 0.617 (0.59-0.65), pass 59.9% (57-63%), no-submit 25.0% (24-30%), zero-groups 16.0% (15-27%), truncation 1.8%, u2 clip 0.0053, grad norm 0.08. The flat stretch from e5 to e7 was noise around a rising trend, not a plateau, and holding off the hard_share switch was the right call.
+
+### Decision 9
+
+**CONTINUE** after eval e9 (7,200 rollouts used, validation pass rate 39.5%). Settings changed: none.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0, temperature 1.
+
+**Reason.** e9 at 39.5 confirms e8 (39.2): two evals at this level, +16.3+-3.5 over base, and trail-3 is the best so far at 37.4. Continuing lets the trailing window fill with evals near 39. Training still edges up (reward 0.617 to 0.628, pass 59.9% to 61.6%), though more slowly, and no-submit ticked up to 26.6%. No trigger fired: zero-groups is 20%, under 25%. Nothing looks unstable: grad norm 0.08-0.10, u2 clip 0.005, load errors 0.2%, only 2 tasks rested. One slower segment is not enough to justify a confounding knob change.
+
+**Prediction.** e10 val lands at 36-42%, putting trail-3 at 38.2-40.2. Training reward 0.62-0.68, pass 61-66%, no-submit 21-27%, zero-groups 15-27%, truncation under 5%. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If zero-groups reach 25% or more, or training reward stays under 0.64 with e10 val at 38 or lower (a second slow segment), I start a new phase with hard_share 0.25, optimizer kept, same learning rate. If e10 val falls below 34.5 (about 2 paired SE under e9) with training reward under 0.60, I revert to e9 with a learning rate near 3e-05. If u2 clip exceeds 0.15, same revert.
+
+**Grade of its previous prediction.** Mostly right. Val 39.5 fell inside the predicted 35-40, and trail-3 37.4 inside 35.9-37.5, both near the top. In range: reward 0.628 (0.62-0.68) at the low edge, pass 61.6% (60-66%), zero-groups 20.0% (14-26%), truncation 2.5%, u2 clip 0.0050, grad norm 0.10. One miss: no-submit rose to 26.6% against a predicted 20-26%, the first segment in this phase where it did not fall, so training gains are slowing more than I expected.
+
+### Decision 10
+
+**NEW_PHASE** after eval e10 (8,000 rollouts used, validation pass rate 40.2%). Settings changed: hard-task share 0 to 0.25.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0.25, temperature 1.
+
+**Reason.** e10 at 40.2 is the best eval and trail-3 (39.6), but gains are slowing: val +0.2 and +0.8, training reward 0.617, 0.628, 0.631, pass flat near 61%. My trigger did not strictly fire (val is above 38), so this is a judgement call. The easy pool has wrapped (1200 visits over 1032 tasks), so its prompts are now repeats; the hard pool is unseen and val is unfiltered. One hard prompt in four keeps 75% of the working signal and measures the hard pass rate. Optimizer and other knobs unchanged, for attribution.
+
+**Prediction.** e11 val lands at 38-42.5%, putting trail-3 at 39.2-40.7. Training totals fall because of the mix: reward 0.46-0.54, pass 45-53%, no-submit 26-34%, zero-groups 22-35%. By pool: easy pass 59-65% of 600, hard pass 5-15% of 200. Truncation under 5%, u2 clip ratio under 0.02, grad norm under 0.3.
+
+**Would change its mind if.** If e11 val falls below 36.5 (about 2 paired SE under e10), I revert to e10 with hard_share 0. If u2 clip exceeds 0.15, same revert. If hard pass is under 4% with val flat, hard prompts are mostly wasted: I drop back to hard_share 0 and try a learning rate near 1e-04 instead. If hard pass is 15% or more and val holds at 39 or higher, I consider hard_share 0.5. If val stays flat within noise for two more evals, I lower temperature toward 0.8.
+
+**Grade of its previous prediction.** Right on every figure. Val 40.2 fell inside the predicted 36-42, and trail-3 39.6 inside 38.2-40.2. In range: reward 0.631 (0.62-0.68) and pass 61.3% (61-66%), both at the low edge again; no-submit 25.2% (21-27%); zero-groups 20.0% (15-27%); truncation 1.8%; u2 clip 0.0048; grad norm 0.09. The ranges were wide enough to hold a second slow segment: reward moved only +0.003 and pass slipped 0.3 points, so the slowdown I flagged last time continued.
+
+### Decision 11
+
+**CONTINUE** after eval e11 (8,800 rollouts used, validation pass rate 40.2%). Settings changed: none.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0.25, temperature 1.
+
+**Reason.** e11 held at 40.2 (+0.0+-2.2) and trail-3 rose to 39.9, the best so far. The hard mix cost nothing on val, and training beat expectations: easy pass 68.7% (from 61.3%), hard pass 15.5%, so hard prompts carry signal. Nothing looks unstable: grad norm 0.06, u2 clip 0.004, load errors 0.1%. Truncation (4.1%) and tokens (1340) rose with the hard tasks but stay tolerable. One segment is too little to judge n2, and val has lagged training before (e5-e7, then e8). A second point gives attribution before I touch the learning rate or temperature.
+
+**Prediction.** e12 val lands at 38-43%, putting trail-3 at 39.5-41.1. Training reward 0.54-0.61, pass 52-59%, no-submit 28-35%, zero-groups 18-30%, truncation under 6%. By pool: easy pass 63-71% of 600, hard pass 10-20% of 200. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e12 val is 41 or lower (a fourth eval near 40), I start a new phase with learning rate near 8e-05, optimizer kept, since u2 clip equal to u1 shows the policy barely moves; I add hard_share 0.5 if hard pass stays at 12% or more. If e12 falls below 36 (about 2 paired SE under e11), I revert to e10 with hard_share 0. If u2 clip exceeds 0.15, I revert to e11 at a lower learning rate. If truncation exceeds 7%, I drop hard_share back to 0.
+
+**Grade of its previous prediction.** Val right, training too pessimistic. Val 40.2 fell inside the predicted 38-42.5, and trail-3 39.9 inside 39.2-40.7. Training totals beat the ranges: reward 0.573 (0.46-0.54), pass 55.4% (45-53%). By pool, easy pass 68.7% beat 59-65% and hard pass 15.5% edged past 5-15%. In range: no-submit 33.1% (26-34%) near the top, zero-groups 24.0% (22-35%), truncation 4.1% (under 5%), u2 clip 0.0037, grad norm 0.06. I underestimated both pools, and did not expect easy pass to jump 7 points in one segment.
+
+### Decision 12
+
+**CONTINUE** after eval e12 (9,600 rollouts used, validation pass rate 44.2%). Settings changed: none.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0.25, temperature 1.
+
+**Reason.** e12 at 44.2 is the best eval (+4.0+-2.2 over e11, +21.1+-3.3 over base) and the best trail-3 (41.5). My raise-LR trigger (e12 at 41 or lower) did not fire. The hard mix seems to help: hard pass 15.5% to 17.0%, partial credit 5.8% to 8.2%, easy pass holding near 67-68%. Nothing looks unstable: grad norm 0.06, u2 clip 0.003, load errors 0.4%. Zero-groups (32%) and truncation (4.6%) are creeping up but tolerable. The pick rewards a sustained level, so I let the trailing window fill at this level rather than add a confound.
+
+**Prediction.** e13 val lands at 40-46%, putting trail-3 at 41.5-43.5. Training reward 0.55-0.62, pass 53-60%, no-submit 27-34%, zero-groups 24-36%, truncation under 6.5%. By pool: easy pass 64-72% of 600, hard pass 12-21% of 200. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e13 val is 41 or lower with training reward under 0.58, the e12 gain was partly noise: I start a new phase with learning rate near 8e-05, optimizer kept. If e13 falls below 38 (well over 2 paired SE under e12), I revert to e12 with a learning rate near 3e-05. If u2 clip exceeds 0.15, same revert. If truncation exceeds 7%, I drop hard_share back to 0. If zero-groups exceed 40%, I reconsider the pool mix. If hard pass reaches 20% with val holding at 43 or higher, I consider hard_share 0.5.
+
+**Grade of its previous prediction.** Val too cautious, training right. Val 44.2 beat the predicted 38-43, and trail-3 41.5 beat 39.5-41.1. In range: reward 0.569 (0.54-0.61), pass 54.8% (52-59%), no-submit 31.4% (28-35%), truncation 4.6% (under 6%), easy pass 67.3% (63-71%), hard pass 17.0% (10-20%), u2 clip 0.0032, grad norm 0.06. One miss: zero-groups rose to 32.0% against a predicted 18-30%. As at e8, val jumped after a flat stretch while training totals stayed level, so val again lagged the training gains.
+
+### Decision 13
+
+**REVERT to e12** after eval e13 (10,400 rollouts used, validation pass rate 38.4%). Settings changed: learning rate 5e-05 to 3e-05.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.25, temperature 1.
+
+**Reason.** e13 fell 5.8+-1.9 from e12, about 3 paired SE, to 38.4: just above my revert line of 38, but the drop is the size that line was meant to catch. Training also slipped: reward 0.569 to 0.558, hard pass 17.0% to 11.5%. My raise-LR trigger fired literally, but raising the learning rate after a 3-SE drop would add drift. Reverting to e12 restarts from the 44.2 checkpoint and keeps e11 and e12 in the trailing window instead of e13. Training has been flat since e9, so a lower learning rate (3e-05) should reduce wander. Other knobs unchanged, optimizer kept.
+
+**Prediction.** e14 (on the e12 path) val lands at 40-45%, putting trail-3 at 41.5-43.1, at or above the current best of 41.5. Training reward 0.53-0.60, pass 51-58%, no-submit 28-35%, zero-groups 16-32%, truncation under 6.5%. By pool: easy pass 64-71% of 600, hard pass 8-18% of 200. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e14 val is 39.5 or lower (over 2 paired SE under e12), e12's 44.2 was mostly eval noise around a 40 plateau: I try a real change from e12, temperature near 0.8 or hard_share 0.5, rather than more of this recipe. If e14 holds at 42 or higher, I continue to fill the trailing window. If u2 clip exceeds 0.15, I revert to e12 at a lower learning rate. If truncation exceeds 7%, I drop hard_share to 0. If training reward falls under 0.52 with val under 41, the 3e-05 rate is too slow and I return to 5e-05.
+
+**Grade of its previous prediction.** Val missed low. Val 38.4 fell below the predicted 40-46, and trail-3 41.0 below 41.5-43.5. Most training figures landed in range: reward 0.558 (0.55-0.62) and pass 53.5% (53-60%) at the low edge, no-submit 31.9% (27-34%), truncation 4.9%, easy pass 67.5% (64-72%), u2 clip 0.0044, grad norm 0.06. Two misses: hard pass 11.5% against 12-21%, and zero-groups 18.0% against 24-36%. I treated e12 as a new level; the 3-SE drop shows it was at least partly a high draw, and the policy drifts more per segment than the clip ratio suggests.
+
+### Decision 14
+
+**CONTINUE** after eval e14 (11,200 rollouts used, validation pass rate 42.2%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.25, temperature 1.
+
+**Reason.** e14 at 42.2 met my stated hold line (42 or higher), and its trail-3 of 42.2 is the best of the run. It is -2.0+-2.0 from e12, one paired SE, so the e12 checkpoint level looks real rather than a one-off high draw. Training at 3e-05 is healthy: reward 0.587, easy pass 73.2% (up from 67%), load errors 0.2%, grad norm 0.05, u2 clip 0.004. Hard pass (11.0%) and zero-groups (32%) are the weak spots but within tolerance. Another eval near 42 lifts trail-3 as the window becomes e12, e14, e15.
+
+**Prediction.** e15 val lands at 39.5-44.5%, putting trail-3 at 42.0-43.6. Training reward 0.55-0.62, pass 54-60%, no-submit 28-35%, zero-groups 24-38%, truncation under 6.5%. By pool: easy pass 68-76% of 600, hard pass 8-17% of 200. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e15 falls below 38 (about 2 paired SE under e14), I revert to e14 with a real change, temperature near 0.8, rather than more of this recipe. If e15 lands at 38-40.5 with training reward flat, I start a new phase with temperature near 0.8, optimizer kept. If zero-groups exceed 40%, I reconsider the pool mix (hard_share 0.5 only if hard pass is 12% or more). If truncation exceeds 7%, I drop hard_share to 0. If u2 clip exceeds 0.15, I revert to e14 at a lower learning rate.
+
+**Grade of its previous prediction.** Mostly right. Val 42.2 fell inside the predicted 40-45, and trail-3 42.2 inside 41.5-43.1. In range: reward 0.587 (0.53-0.60), pass 57.6% (51-58%) near the top, no-submit 32.4% (28-35%), zero-groups 32.0% (16-32%) at the top edge, truncation 4.5%, hard pass 11.0% (8-18%), u2 clip 0.0037, grad norm 0.06. One miss: easy pass 73.2% beat the predicted 64-71%. The revert did what I wanted: it kept e13 out of the trailing window and the lower learning rate did not stall training.
+
+### Decision 15
+
+**CONTINUE** after eval e15 (12,000 rollouts used, validation pass rate 44.0%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.25, temperature 1.
+
+**Reason.** e15 at 44.0 gives the best trail-3 of the run (43.5), +1.8+-2.1 over e14 and +20.8+-3.5 over base. No trigger fired: val is well above 40.5, zero-groups 28%, truncation 3.2%, u2 clip 0.003. Training slipped (reward 0.587 to 0.531, easy pass 73.2% to 65.3%, no-submit up to 36.2%), but one segment of 100 prompts is noisy and val did not follow. The pick rewards a sustained level: another eval near 43 lifts trail-3 as the window becomes e14, e15, e16. A knob change now would risk that.
+
+**Prediction.** e16 val lands at 40-46%, putting trail-3 at 42.1-44.1. Training reward 0.52-0.60, pass 51-59%, no-submit 29-37%, zero-groups 22-36%, truncation under 6.5%. By pool: easy pass 63-73% of 600, hard pass 8-17% of 200. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e16 falls below 40 (about 2 paired SE under e15), I revert to e15 with a real change, temperature near 0.8, rather than more of this recipe. If e16 lands at 40-41.5 with training reward again under 0.54, I start a new phase with temperature near 0.8, optimizer kept. If no-submit stays above 36% for a second segment, same change. If zero-groups exceed 40%, I reconsider the pool mix. If truncation exceeds 7%, I drop hard_share to 0. If u2 clip exceeds 0.15, I revert to e15 at a lower learning rate.
+
+**Grade of its previous prediction.** Val right, training too optimistic. Val 44.0 fell inside the predicted 39.5-44.5, and trail-3 43.5 inside 42.0-43.6, both near the top. Training totals missed low: reward 0.531 (0.55-0.62), pass 52.4% (54-60%), easy pass 65.3% (68-76%), and no-submit 36.2% was above 28-35%. In range: zero-groups 28.0% (24-38%), truncation 3.2%, hard pass 13.5% (8-17%), u2 clip 0.0035, grad norm 0.06. I read the e14 easy-pass jump to 73% as a new level; it was largely a favourable draw of prompts.
+
+### Decision 16
+
+**CONTINUE** after eval e16 (12,800 rollouts used, validation pass rate 45.2%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.25, temperature 1.
+
+**Reason.** e16 at 45.2 is the best eval and the best trail-3 of the run (43.8): +1.3+-1.6 over e15, +22.1+-3.5 over base. n3 has now risen three evals in a row (42.2, 44.0, 45.2). Training recovered from the e15 dip: reward 0.531 to 0.62, easy pass 73.7%, hard pass 22.5% (best so far), no-submit down to 28.2%. No trigger fired: zero-groups 34%, truncation 3.6%, u2 clip 0.004, grad norm 0.06. The pick rewards a sustained level, so another eval near 44-45 is worth more than a confounding knob change.
+
+**Prediction.** e17 val lands at 41.5-47%, putting trail-3 at 43.6-45.4. Training reward 0.55-0.63, pass 54-62%, no-submit 27-35%, zero-groups 26-38%, truncation under 6.5%. By pool: easy pass 66-75% of 600, hard pass 11-22% of 200. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e17 falls below 41.5 (about 2 paired SE under e16), I revert to e16 with a real change, temperature near 0.8, rather than more of this recipe. If e17 lands at 41.5-43 with training reward under 0.55, I start a new phase with temperature near 0.8, optimizer kept. If zero-groups exceed 40%, or hard pass stays at 20% or more with val at 44 or higher, I consider hard_share 0.5. If truncation exceeds 7%, I drop hard_share to 0. If u2 clip exceeds 0.15, I revert to e16 at a lower learning rate.
+
+**Grade of its previous prediction.** Val right, training too pessimistic. Val 45.2 fell inside the predicted 40-46, and trail-3 43.8 inside 42.1-44.1, both near the top. Training beat the ranges: reward 0.62 (0.52-0.60), pass 60.9% (51-59%), no-submit 28.2% (29-37%), easy pass 73.7% (63-73%), hard pass 22.5% (8-17%). In range: zero-groups 34.0% (22-36%) near the top, truncation 3.6%, u2 clip 0.0036, grad norm 0.06. After e15's dip I shifted my training ranges down; that dip was prompt-draw noise, as was part of the e14 jump before it.
+
+### Decision 17
+
+**CONTINUE** after eval e17 (13,600 rollouts used, validation pass rate 43.7%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.25, temperature 1.
+
+**Reason.** e17 at 43.7 is -1.5+-1.8 from e16, under one paired SE, and gives the best trail-3 of the run (44.3). No trigger fired: val is above 43, zero-groups 35%, truncation 4.6%, u2 clip 0.0035, grad norm 0.07. Training dipped (reward 0.62 to 0.517, easy pass 63.2%, hard pass 11.0%, wrong 16.5%), but n3 has alternated this way every segment (0.587, 0.531, 0.62, 0.517) and val did not follow the e15 dip. One more eval tells me whether n3 is still rising or has plateaued near 44 before I spend budget on a temperature change.
+
+**Prediction.** e18 val lands at 41-46.5%, putting trail-3 at 43.3-45.1. Training reward 0.52-0.61, pass 51-60%, no-submit 28-35%, wrong 10-16%, zero-groups 26-38%, truncation under 6.5%. By pool: easy pass 63-74% of 600, hard pass 9-20% of 200. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e18 falls below 40 (about 2 paired SE under e17), I revert to e17 with a real change, temperature near 0.8. If e18 lands at 43.5 or lower with training reward under 0.55, n3 has plateaued near 44 over four evals: I start a new phase with temperature near 0.8, optimizer kept. If zero-groups exceed 40%, I reconsider the pool mix. If truncation exceeds 7%, I drop hard_share to 0. If u2 clip exceeds 0.15, I revert to e17 at a lower learning rate.
+
+**Grade of its previous prediction.** Val right, training too optimistic. Val 43.7 fell inside the predicted 41.5-47, and trail-3 44.3 inside 43.6-45.4. Training totals missed low: reward 0.517 (0.55-0.63), pass 50.1% (54-62%), easy pass 63.2% (66-75%). In range: no-submit 32.8% (27-35%), zero-groups 35.0% (26-38%), truncation 4.6%, hard pass 11.0% at the bottom edge of 11-22%, u2 clip 0.0035, grad norm 0.07. I raised my training ranges after e16's strong segment; that was prompt-draw noise again, as training has alternated up and down every segment of n3.
+
+### Decision 18
+
+**NEW_PHASE** after eval e18 (14,400 rollouts used, validation pass rate 43.5%). Settings changed: hard-task share 0.25 to 0.5.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** n3 has plateaued: val 44.0, 45.2, 43.7, 43.5, training reward alternating near 0.57 without trend. My temperature trigger only half-fired (reward 0.596). I now prefer the pool mix: val's 23% base rate implies roughly half of val is hard-type, where pass is near 15%, so the headroom is there; val already matches pool pass rates, so temperature has no sampling-versus-greedy gap to close and would raise zero-groups (36%). Hard pass averaged 15% in n3, above my 12% bar. One knob changed, optimizer kept; e17's trail-3 of 44.3 stays banked.
+
+**Prediction.** e19 val lands at 41-46.5%, putting trail-3 at 42.7-44.6. Training totals fall because of the mix: reward 0.40-0.49, pass 38-47%, no-submit 34-45%, wrong 12-21%, zero-groups 38-50%, truncation 4.5-8%, tokens 1400-1550. By pool: easy pass 63-75% of 400, hard pass 10-21% of 400. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e19 falls below 40 (about 2 paired SE under e18), I revert to e18 with hard_share 0.25. If zero-groups exceed 50% or truncation exceeds 8.5%, I return to hard_share 0.25. If e19 and e20 both land at 43.5 or lower with hard pass under 13%, the extra hard prompts are not paying: I revert to e18 and resume the n3 recipe. If e19 is 45 or higher, I continue to fill the window. If u2 clip exceeds 0.15, I revert to e18 at a lower learning rate.
+
+**Grade of its previous prediction.** Right on nearly every figure. Val 43.5 fell inside the predicted 41-46.5, and trail-3 44.1 inside 43.3-45.1. In range: reward 0.596 (0.52-0.61) and pass 58.5% (51-60%) near the top, wrong 14.8% (10-16%), zero-groups 36.0% (26-38%), truncation 3.8%, easy pass 72.0% (63-74%), hard pass 18.0% (9-20%), u2 clip 0.0034, grad norm 0.06. One miss: no-submit 26.5% came in below 28-35%. The wide ranges held because I stopped chasing segment-to-segment swings; val itself has not moved for three evals.
+
+### Decision 19
+
+**CONTINUE** after eval e19 (15,200 rollouts used, validation pass rate 44.2%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e19 at 44.2 is +0.8+-1.5 over e18: the switch to hard_share 0.5 cost nothing on val, and no trigger fired. Zero-groups are 43% (limit 50%), truncation 7.2% (limit 8.5%), hard pass 14.5% (above my 13% bar), easy pass held at 72.5%. Partial credit doubled to 10.0%, so hard prompts carry gradient signal. Nothing looks unstable: grad norm 0.04, u2 clip 0.002, load errors 0.4%. One segment is too little to judge n4, and val has lagged training by one or two evals before (e8, e12). With 11 evals left, a second point is affordable.
+
+**Prediction.** e20 val lands at 41.5-46.5%, putting trail-3 at 43.1-44.7. Training reward 0.41-0.50, pass 39-48%, partial 6-12%, no-submit 33-43%, wrong 13-21%, zero-groups 38-50%, truncation 5-8.5%, tokens 1450-1620. By pool: easy pass 64-76% of 400, hard pass 10-21% of 400. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e20 falls below 41 (about 2 paired SE under e19), I revert to e18 with hard_share 0.25. If zero-groups exceed 50% or truncation exceeds 8.5%, I start a new phase with hard_share 0.25. If e20 is 43.5 or lower with hard pass under 13%, the extra hard prompts are not paying: new phase from e20 with hard_share 0.25 and temperature near 0.8. If e20 is 45 or higher, I continue to fill the window. If u2 clip exceeds 0.15, I revert to e18 at a lower learning rate.
+
+**Grade of its previous prediction.** Right on nearly every figure. Val 44.2 fell inside the predicted 41-46.5, and trail-3 43.8 inside 42.7-44.6. In range: reward 0.465 (0.40-0.49), pass 43.5% (38-47%), no-submit 38.0% (34-45%), wrong 18.1% (12-21%), zero-groups 43.0% (38-50%), truncation 7.2% (4.5-8%) near the top, easy pass 72.5% (63-75%), hard pass 14.5% (10-21%), u2 clip 0.0024, grad norm 0.04. One marginal miss: tokens 1560 against 1400-1550. The mix change behaved as expected; val has yet to show whether it helps.
+
+### Decision 20
+
+**CONTINUE** after eval e20 (16,000 rollouts used, validation pass rate 45.0%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e20 at 45.0 met my stated continue line (45 or higher): +0.8+-1.9 over e19, +21.9+-3.6 over base. n4 has risen twice (44.2, 45.0) and its trail-3 of 44.2 is within 0.1 of the run's best (44.3 at e17). Hard pass rose to 18.8%, zero-groups fell to 29%, partial credit held at 9.1%. Nothing looks unstable: grad norm 0.05, u2 clip 0.003, load errors 0.2%. Truncation (7.6%) is the one figure near its limit. Another eval near 44-45 sets a new best trail-3 as the window becomes e19, e20, e21.
+
+**Prediction.** e21 val lands at 42-47%, putting trail-3 at 43.7-45.4. Training reward 0.41-0.50, pass 39-48%, partial 6-12%, no-submit 33-43%, wrong 13-21%, zero-groups 27-46%, truncation 5.5-8.5%, tokens 1480-1650. By pool: easy pass 62-75% of 400, hard pass 11-22% of 400. u2 clip ratio stays under 0.02 and grad norm under 0.3.
+
+**Would change its mind if.** If e21 falls below 41 (about 2 paired SE under e20), I revert to e20 with hard_share 0.25. If truncation exceeds 8.5% or zero-groups exceed 50%, I start a new phase with hard_share 0.25. If e21 is 43.5 or lower with hard pass under 13%, the extra hard prompts are not paying: new phase with hard_share 0.25 and temperature near 0.8. If e21 is 44 or higher, I continue to fill the window. If u2 clip exceeds 0.15, I revert to e20 at a lower learning rate.
+
+**Grade of its previous prediction.** Mostly right. Val 45.0 fell inside the predicted 41.5-46.5, and trail-3 44.2 inside 43.1-44.7. In range: reward 0.434 (0.41-0.50), pass 41.1% (39-48%), partial 9.1% (6-12%), no-submit 39.8% (33-43%), wrong 18.9% (13-21%), truncation 7.6% (5-8.5%), tokens 1600 (1450-1620) near the top, hard pass 18.8% (10-21%), u2 clip 0.003, grad norm 0.05. Two misses: zero-groups fell to 29.0% against 38-50%, and easy pass 63.5% came in just under 64-76%. Zero-groups swing more between segments than my range allowed.
+
+### Decision 21
+
+**REVERT to e20** after eval e21 (16,800 rollouts used, validation pass rate 43.2%). Settings changed: temperature 1 to 0.8.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 0.8.
+
+**Reason.** Val has sat near 44 for eight evals (e14-e21) across two pool mixes, and training shows no trend, so more of the same only redraws noise. e21's drop (1.8+-2.1) is within noise but missed my continue line. Reverting to e20 costs no extra budget, starts from the 45.0 checkpoint and keeps e19 and e20 (44.2, 45.0) in the trailing window. Temperature 0.8 is the one untried knob with a mechanism: sampling nearer the greedy policy val scores. Only that knob changes, so e21 is the temperature-1.0 control from the same start. e17's 44.3 stays banked.
+
+**Prediction.** e22 (on the e20 path) val lands at 42-46.5%, putting trail-3 at 43.7-45.2; 43.8 or higher sets a new best. Training at temperature 0.8: reward 0.43-0.53, pass 41-51%, partial 6-11%, no-submit 32-41%, wrong 13-20%, zero-groups 33-52%, truncation 4-8%, tokens 1400-1620. By pool: easy pass 65-78% of 400, hard pass 12-23% of 400. u1 clip ratio stays under 0.01, u2 under 0.02, grad norm under 0.3.
+
+**Would change its mind if.** If u1 clip ratio exceeds 0.02 (a sampler-trainer mismatch at temperature below 1) or e22 falls below 41.5, I revert to e20 at temperature 1.0 with learning rate near 2e-05. If e22 lands at 41.5-43.7 with zero-groups above 50% or hard pass under 11%, same revert; otherwise temperature 0.8 gets one more segment. If e22 is 43.8 or higher, I continue to fill the window. If truncation exceeds 8.5%, I drop hard_share to 0.25. With 3 evals left I stop experimenting and hold the best path.
+
+**Grade of its previous prediction.** Right on every figure, though val came in low. Val 43.2 fell inside the predicted 42-47, and trail-3 44.1 inside 43.7-45.4, but both sat near the bottom and n4 did not set a new best. In range: reward 0.441 (0.41-0.50), pass 41.0% (39-48%), partial 8.8%, no-submit 41.6% (33-43%) near the top, wrong 17.1%, zero-groups 29.0% (27-46%), truncation 7.8% (5.5-8.5%), tokens 1560, easy pass 67.0%, hard pass 15.0%, u2 clip 0.003, grad norm 0.06. Wide ranges held; they did not tell me whether hard_share 0.5 helps, and three evals say it does not.
+
+### Decision 22
+
+**REVERT to e20** after eval e22 (17,600 rollouts used, validation pass rate 43.2%). Settings changed: learning rate 3e-05 to 1e-05, temperature 0.8 to 1.
+
+Settings from here: learning rate 1e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** Temperature 0.8 showed no benefit: e22 equals its temperature-1.0 control e21 (43.2), with lower training pass (38.4% vs 41.0%) and more zero-groups (40% vs 29%). My rule gave 0.8 one more segment, but on that path e23 needs 45.0 to beat the banked 44.3; from e20 it needs 44.0. Val has been flat near 44 since e14, and both e20 children at 3e-05 fell 1.8. So I anneal: revert to e20 (45.0) with the n4 recipe at learning rate 1e-05 to reduce checkpoint wander. Only the learning rate differs from e21's run.
+
+**Prediction.** e23 (on the e20 path) val lands at 42.5-46%, putting trail-3 at 43.9-45.1; 44.0 or higher sets a new best. Training resembles n4: reward 0.40-0.48, pass 38-46%, partial 6-12%, no-submit 34-44%, wrong 13-21%, zero-groups 27-45%, truncation 5.5-8.5%, tokens 1480-1650. By pool: easy pass 61-72% of 400, hard pass 11-20% of 400. u1 and u2 clip ratios stay under 0.01, grad norm under 0.3.
+
+**Would change its mind if.** If e23 is 44.0 or higher, I continue to fill the window. If e23 lands at 42-43.9, I continue one more segment, since the window (e20, e23, e24) can still set a new best. If e23 falls below 42, the anneal did not hold e20's level: I revert to e16 (45.2) with hard_share 0.25 and learning rate 1e-05. If truncation exceeds 8.5%, I drop hard_share to 0.25. If u2 clip exceeds 0.15, I revert to e20 at a lower learning rate. With 3 evals left I stop experimenting and hold the best path.
+
+**Grade of its previous prediction.** Val right but low, training too optimistic. Val 43.2 fell inside the predicted 42-46.5 and trail-3 44.1 inside 43.7-45.2, but below the 43.8 needed for a new best. Misses: reward 0.421 (0.43-0.53), pass 38.4% (41-51%), wrong 21.4% (13-20%), easy pass 63.5% (65-78%). In range: partial 10.1%, no-submit 40.0%, zero-groups 40.0%, truncation 7.2%, tokens 1600, hard pass 13.2% near the bottom, u1 clip 0.0026, u2 clip 0.0028, grad norm 0.05. I expected lower temperature to lift sampled pass rates; it did not, so there was no sampling-versus-greedy gap to close.
+
+### Decision 23
+
+**CONTINUE** after eval e23 (18,400 rollouts used, validation pass rate 44.7%). Settings changed: none.
+
+Settings from here: learning rate 1e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e23 at 44.7 met my continue line (44.0 or higher) and sets the best trail-3 of the run (44.6, window e19, e20, e23). It is -0.2+-1.9 from e20, so the 1e-05 anneal held the e20 level where both 3e-05 children fell 1.8. Training matches n4: reward 0.431, easy pass 65.8%, hard pass 13.5%, truncation 6.4%, grad norm 0.05, u2 clip 0.003. Val has been flat near 44 since e14, so I stop experimenting and fill the window: e24 at 44.2 or higher lifts trail-3 again as the window becomes e20, e23, e24.
+
+**Prediction.** e24 val lands at 42.5-46.5%, putting trail-3 at 44.1-45.4; 44.2 or higher sets a new best. Training resembles n4 and n6: reward 0.40-0.48, pass 37-46%, partial 6-12%, no-submit 34-44%, wrong 13-21%, zero-groups 27-45%, truncation 5-8.5%, tokens 1480-1650. By pool: easy pass 61-73% of 400, hard pass 10-20% of 400. u1 and u2 clip ratios stay under 0.01, grad norm under 0.3.
+
+**Would change its mind if.** If e24 is 44.2 or higher, I continue to fill the window. If e24 lands at 42.5-44.1, I continue one more segment at this low learning rate. If e24 falls below 42.5, I revert to e23 with the same recipe at learning rate near 5e-06, keeping e20 and e23 in the window. If truncation exceeds 8.5%, I drop hard_share to 0.25. If u2 clip exceeds 0.15, I revert to e23 at a lower learning rate. I try no new knobs in the remaining evals.
+
+**Grade of its previous prediction.** Right on every figure. Val 44.7 fell inside the predicted 42.5-46, and trail-3 44.6 inside 43.9-45.1, a new best above the 44.0 I needed. In range: reward 0.431 (0.40-0.48), pass 39.6% (38-46%), partial 9.9%, no-submit 41.6% (34-44%), wrong 18.5%, zero-groups 36.0% (27-45%), truncation 6.4%, tokens 1560, easy pass 65.8% (61-72%), hard pass 13.5% (11-20%), u1 clip 0.0032, u2 clip 0.0031, grad norm 0.05. The anneal held e20's level as intended; one eval cannot show whether that is the lower learning rate or noise.
+
+### Decision 24
+
+**REVERT to e23** after eval e24 (19,200 rollouts used, validation pass rate 41.7%). Settings changed: learning rate 1e-05 to 2e-06.
+
+Settings from here: learning rate 2e-06, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e24 fell 3.0+-1.4 (over 2 paired SE) to 41.7, below my 42.5 revert line, with training flat. Continuing n6 would need e25 near 47.5 to beat the banked 44.6; reverting to e23 keeps e20 and e23 (45.0, 44.7) in the window, so e25 needs only 44.5. Paired SEs at 1e-05 (1.4-1.9) were no smaller than at 3e-05, so halving the rate as planned looks too timid: I go to 2e-06. Val has been flat near 44 since e14, so I hold the best checkpoint rather than add wander. Other knobs unchanged.
+
+**Prediction.** e25 (on the e23 path) val lands at 42.7-46.2%, putting trail-3 at 44.1-45.3; 44.5 or higher sets a new best. Paired SE against e23 shrinks to 1.3 or less. Training resembles n6: reward 0.40-0.48, pass 37-46%, partial 6-12%, no-submit 34-44%, wrong 14-22%, zero-groups 28-46%, truncation 4.5-8.5%, tokens 1450-1650. By pool: easy pass 60-72% of 400, hard pass 10-20% of 400. u1 and u2 clip ratios stay under 0.01, grad norm under 0.3.
+
+**Would change its mind if.** If e25 is 44.5 or higher, I continue to fill the window. If e25 is below 44.5 with paired SE against e23 clearly smaller (1.0 or less), the low rate reduces wander: I revert to e23 once more at 1e-06. If e25 is below 44.5 with paired SE still 1.4 or more, learning rate does not buy stability: I revert to e23 with the n3 recipe (3e-05, hard_share 0.25) to seek real gains. If truncation exceeds 8.5%, I drop hard_share to 0.25.
+
+**Grade of its previous prediction.** Val missed low, training right. Val 41.7 fell below the predicted 42.5-46.5, and trail-3 43.8 below 44.1-45.4. Every training figure landed in range: reward 0.429 (0.40-0.48), pass 40.4% (37-46%), partial 9.2%, no-submit 38.6%, wrong 20.9% (13-21%) at the top edge, zero-groups 41.0% (27-45%), truncation 5.6%, tokens 1510, easy pass 63.5%, hard pass 17.2%, u1 clip 0.0030, u2 clip 0.0027, grad norm 0.05. I read e23 holding as the anneal working; one eval later the same phase dropped 2 paired SE with training unchanged.
+
+### Decision 25
+
+**CONTINUE** after eval e25 (20,000 rollouts used, validation pass rate 45.5%). Settings changed: none.
+
+Settings from here: learning rate 2e-06, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e25 at 45.5 met my continue line (44.5 or higher) and sets the best trail-3 of the run (45.1, window e20, e23, e25). It is +0.8+-1.5 over e23, so the 2e-06 phase held the e23 level. Training matches n6: reward 0.435, truncation 7.5%, grad norm 0.06, u2 clip 0.003. Val has been flat near 44-45 since e14 across learning rates, pool mixes and temperature, so a real-gain attempt with 5 evals left has poor odds. Continuing puts e23 and e25 (44.7, 45.5) in the next window: e26 at 45.2 or higher sets a new best.
+
+**Prediction.** e26 val lands at 43.0-47.0%, putting trail-3 at 44.4-45.7; 45.2 or higher sets a new best. Paired SE against e25 stays at 1.2-1.8, since the low rate did not shrink it. Training resembles n6 and n7: reward 0.40-0.48, pass 37-46%, partial 6-12%, no-submit 34-44%, wrong 14-22%, zero-groups 26-45%, truncation 5-8.5%, tokens 1480-1650. By pool: easy pass 60-72% of 400, hard pass 11-22% of 400. u1 and u2 clip ratios stay under 0.01, grad norm under 0.3.
+
+**Would change its mind if.** If e26 is 45.2 or higher, I continue to fill the window. If e26 is below 45.2, I revert to e25 with the same recipe at a near-identical low rate (about 3e-06): that keeps e23 and e25 in the window, so the next eval again needs only 45.2, whereas continuing past a low e26 would need about 46.5 or more. If truncation exceeds 8.5%, I drop hard_share to 0.25. If u2 clip exceeds 0.15, I revert to e25 at 1e-06. I try no new knobs in the remaining evals.
+
+**Grade of its previous prediction.** Mostly right. Val 45.5 fell inside the predicted 42.7-46.2 and trail-3 45.1 inside 44.1-45.3, a new best above the 44.5 I needed. In range: reward 0.435, pass 41.5%, partial 8.0%, no-submit 38.5%, wrong 19.2%, zero-groups 28.0% at the bottom edge, truncation 7.5%, tokens 1580, easy pass 62.0%, u1 clip 0.0030, u2 clip 0.0032, grad norm 0.06. Two misses: paired SE against e23 was 1.5, not 1.3 or less, so a tiny learning rate does not reduce eval-to-eval noise; and hard pass 21.0% edged above 10-20%.
+
+### Decision 26
+
+**REVERT to e25** after eval e26 (20,800 rollouts used, validation pass rate 43.2%). Settings changed: learning rate 2e-06 to 1e-06.
+
+Settings from here: learning rate 1e-06, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e26 fell 2.3+-1.6 to 43.2, firing my stated trigger (below 45.2). Continuing would need e27 near 46.7 to beat the banked 45.1; reverting to e25 keeps e23 and e25 (44.7, 45.5) in the window, so e27 needs 45.2. Val has been flat near 44 since e14 across every knob tried, so I expect no real gain in four evals: this holds the best checkpoint, and any new best would be mostly eval noise. I use the minimum rate, 1e-06, rather than the planned 3e-06, to minimise drift without replaying n7. Other knobs unchanged, optimizer kept.
+
+**Prediction.** e27 (on the e25 path) val lands at 42.2-46.2%, putting trail-3 at 44.1-45.5; 45.2 or higher sets a new best, which I give about one chance in four. Paired SE against e25 stays at 1.2-1.8. Training resembles n7: reward 0.39-0.47, pass 37-45%, partial 6-11%, no-submit 35-45%, wrong 14-22%, zero-groups 26-45%, truncation 3-8%, tokens 1450-1650. By pool: easy pass 60-71% of 400, hard pass 11-21% of 400. u1 and u2 clip ratios stay under 0.01, grad norm under 0.3.
+
+**Would change its mind if.** If e27 is 45.2 or higher, I continue to fill the window. If e27 is below 45.2, I revert to e25 again with this recipe at a slightly different minimal rate (about 1.5e-06), since that window still needs only 45.2 while continuing would need far more. If truncation exceeds 8.5%, I drop hard_share to 0.25. If paired SE against e25 falls to 1.0 or less, the minimum rate does preserve the checkpoint and I keep it for every remaining segment. I try no new knobs: no real-gain attempt can fill a three-eval window in the budget left.
+
+**Grade of its previous prediction.** In range but low. Val 43.2 sat at the bottom edge of the predicted 43.0-47.0 and trail-3 44.5 at the bottom of 44.4-45.7, short of the 45.2 needed for a new best. Paired SE 1.6 fell inside 1.2-1.8. In range: reward 0.412, pass 39.0%, partial 7.9%, no-submit 42.4%, wrong 17.2%, zero-groups 31.0%, tokens 1550, easy pass 65.0%, hard pass 13.0%, u1 clip 0.0031, u2 clip 0.0029, grad norm 0.04. One miss: truncation 3.5% against 5-8.5%. At 2e-06 the weights barely move, so this drop is eval noise after a high e25.
+
+> Budget extended by hand from 24,000 to 36,000 rollouts (2026-11-18).
+
+### Decision 27
+
+**REVERT to e25** after eval e27 (21,600 rollouts used, validation pass rate 42.5%). Settings changed: learning rate 1e-06 to 0.0001.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e27 fell 3.0+-1.6 at near-zero learning rate, as e26 did: e25's 45.5 was a high draw and the region's level is about 43.7. More redraws offer roughly 10% odds of a 0.3-point gain. With 18 evals left (I had wrongly planned as if few remained), a real attempt is affordable, and the banked 45.1 cannot be lost. Clip ratio 0.003 and grad norm 0.05 show the trust region never binds, and learning rates above 5e-05 are untested. I revert to e25, keeping e23 and e25 in the window, at 1e-04; only the learning rate differs from n4.
+
+**Prediction.** e28 (on the e25 path) val lands at 41-46.5%, putting trail-3 at 43.7-45.6; 45.2 or higher sets a new best. Paired SE against e25 widens to 1.6-2.4. Training: reward 0.39-0.49, pass 37-47%, partial 6-12%, no-submit 33-45%, wrong 14-22%, zero-groups 26-45%, truncation 3.5-8.5%, tokens 1450-1680. By pool: easy pass 60-74% of 400, hard pass 11-22% of 400. u2 clip ratio rises above u1 but stays under 0.03; grad norm under 0.3.
+
+**Would change its mind if.** If e28 falls below 40.5, or training reward drops under 0.36, or load errors exceed 3%, or u2 clip exceeds 0.15, the rate is destructive: I revert to e25 at about 5e-05. If e28 is 45.2 or higher, I continue. If e28 lands at 40.5-45.1, I continue one or two more segments and judge by training trend: easy pass above 73% or hard pass above 20%, sustained, means real gain. If three segments show no trend in training or val, I revert to e25 and try hard_share 0.25 with rollouts_per_update 32.
+
+**Grade of its previous prediction.** In range but low again. Val 42.5 sat at the bottom of the predicted 42.2-46.2 and trail-3 44.2 at the bottom of 44.1-45.5, short of 45.2. Paired SE 1.6 fell inside 1.2-1.8. Every training figure landed in range: reward 0.442, pass 41.9%, partial 8.5%, no-submit 38.0%, wrong 19.6%, zero-groups 32.0%, truncation 4.0%, tokens 1480, easy pass 69.2%, hard pass 14.5%, clip ratios 0.003, grad norm 0.05. Two near-zero-rate children of e25 both fell 2.3-3.0, so holding a checkpoint does not reproduce its score; e25 was a high draw.
+
+### Decision 28
+
+**CONTINUE** after eval e28 (22,400 rollouts used, validation pass rate 46.0%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e28 at 46.0 is the best eval of the run and sets the best trail-3 (45.4, window e23, e25, e28), meeting my continue line of 45.2. It is only +0.5+-2.7 over e25, so this is no proven gain, but 1e-04 was not destructive: reward 0.428, load errors 0.4%, grad norm 0.05, u2 clip 0.0037 barely above u1. The wider paired SE shows the policy now moves, which the flat 44 plateau needed. Continuing puts e25 and e28 (45.5, 46.0) in the next window, so e29 at 44.8 or higher sets a new best.
+
+**Prediction.** e29 val lands at 42.5-48%, putting trail-3 at 44.7-46.5; 44.8 or higher sets a new best. Paired SE against e28 stays wide at 2.0-3.0. Training: reward 0.39-0.49, pass 37-47%, partial 5-11%, no-submit 33-45%, wrong 13-21%, zero-groups 26-45%, truncation 2.5-7.5%, tokens 1350-1600. By pool: easy pass 60-74% of 400, hard pass 11-22% of 400. u2 clip ratio stays at or slightly above u1 and under 0.03; grad norm under 0.3; load errors under 2%.
+
+**Would change its mind if.** If e29 falls below 41 (about 2 paired SE under e28), or training reward drops under 0.36, or load errors exceed 3%, or u2 clip exceeds 0.15, the rate is destructive: I revert to e28 at about 5e-05. If e29 is 44.8 or higher, I continue. If e29 lands at 41-44.7, I continue one more segment only if training shows a trend (easy pass above 73% or hard pass above 20%); otherwise I revert to e28, keeping e25 and e28 in the window, and try hard_share 0.25 with rollouts_per_update 32.
+
+**Grade of its previous prediction.** Mostly right. Val 46.0 fell inside the predicted 41-46.5 near the top, and trail-3 45.4 inside 43.7-45.6, a new best above the 45.2 I needed. In range: reward 0.428, pass 40.9%, partial 6.9%, no-submit 41.9%, wrong 16.9%, zero-groups 32.0%, easy pass 66.5%, hard pass 15.2%, grad norm 0.05; u2 clip 0.0037 rose above u1 0.0034 as predicted, though only just. Misses: paired SE 2.7 exceeded 1.6-2.4, tokens 1420 came under 1450-1680, and truncation 3.4% just under 3.5-8.5%. The gain over e25 is well inside noise.
+
+### Decision 29
+
+**CONTINUE** after eval e29 (23,200 rollouts used, validation pass rate 42.7%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e29 fell 3.3+-2.1 to 42.7, an ordinary plateau draw after a high e28. My continue thresholds were narrowly missed (easy pass 72.2% vs 73, hard pass 18.0% vs 20), so this departs from my rule's letter. But both pools rose together: reward 0.472 and pass 45.1% are the best of 11 segments at this mix, no-submit the lowest. Reverting to e28 would only redraw noise around a favourable window. With 16 evals left and 45.4 banked, a real-gain test matters more. Nothing is unstable: load errors 0.2%, u2 clip 0.0034.
+
+**Prediction.** e30 val lands at 41.5-47%, putting trail-3 at 43.4-45.2; a new best needs 47.6, so I expect none this segment. Paired SE against e29 stays at 1.8-2.8. Training: reward 0.42-0.50, pass 39-48%, partial 6-11%, no-submit 32-42%, wrong 14-21%, zero-groups 26-44%, truncation 3-7.5%, tokens 1420-1620. By pool: easy pass 64-76% of 400, hard pass 12-22% of 400. u2 clip ratio stays at or slightly above u1 and under 0.03; grad norm under 0.3; load errors under 2%.
+
+**Would change its mind if.** If e30 falls below 40, or training reward drops under 0.38, or load errors exceed 3%, or u2 clip exceeds 0.15, the rate is destructive: I revert to e28 at about 5e-05. If training reward is 0.45 or higher again, or e30 is 45 or higher, I continue through e32 to fill a clean window. If reward falls back to 0.44 or lower with val under 45, the e29 uptick was prompt-draw noise: I revert to e28, keeping e25 and e28 in the window, with hard_share 0.25 and rollouts_per_update 32 at 1e-04.
+
+**Grade of its previous prediction.** In range, but val at the bottom. Val 42.7 sat just inside the predicted 42.5-48, and trail-3 44.7 at the bottom edge of 44.7-46.5, short of the 44.8 needed. Paired SE 2.1 fell inside 2.0-3.0. Every training figure landed in range, mostly near the top: reward 0.472, pass 45.1%, partial 8.1%, no-submit 36.0%, wrong 18.6%, zero-groups 32.0%, truncation 5.4%, tokens 1530, easy pass 72.2%, hard pass 18.0%, u2 clip 0.0034 above u1 0.0030, grad norm 0.07, load errors 0.2%. e28's 46.0 was partly a high draw, as e25's was.
+
+### Decision 30
+
+**CONTINUE** after eval e30 (24,000 rollouts used, validation pass rate 50.0%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e30 at 50.0 is the best eval of the run by 4 points: +7.3+-2.9 over e29, +26.9+-3.7 over base, and the best trail-3 (46.2). It met my continue line (45 or higher). Part of it is likely a high draw, since training fell back (reward 0.472 to 0.434, hard pass 13.8%, wrong up to 23.6%). But 1e-04 is the first recipe to leave the 44 plateau, and nothing is unstable: load errors 0.9%, u2 clip 0.003, grad norm 0.07. Continuing puts e30 in the next two windows; e31 at 46.2 or higher sets a new best.
+
+**Prediction.** e31 val lands at 43.5-50%, some regression from 50.0, putting trail-3 at 45.4-47.6; 46.2 or higher sets a new best. Paired SE against e30 stays at 2.0-3.0. Training: reward 0.40-0.49, pass 38-47%, partial 5-11%, no-submit 31-42%, wrong 15-25%, zero-groups 28-46%, truncation 3-7.5%, tokens 1400-1620. By pool: easy pass 63-75% of 400, hard pass 11-21% of 400. u2 clip ratio stays under 0.03, grad norm under 0.3, load errors under 2.5%.
+
+**Would change its mind if.** If e31 is 44 or higher, I continue through e32 to fill a window containing e30. If e31 lands at 42-43.9, I still continue one segment, since the window e30, e31, e32 needs about 46 from e32, the same as a revert would. If e31 falls below 42, or training reward drops under 0.38, or load errors exceed 3%, or u2 clip exceeds 0.15, the rate is degrading the policy: I revert to e30 at about 5e-05. If wrong submissions exceed 26% with no-submit flat, I consider the same lower rate.
+
+**Grade of its previous prediction.** Val far too cautious. Val 50.0 beat the predicted 41.5-47, and trail-3 46.2 beat 43.4-45.2, a new best I said I did not expect. Paired SE 2.9 edged past 1.8-2.8. Training mostly in range: reward 0.434, pass 41.5%, partial 6.1% at the bottom edge, no-submit 34.0%, zero-groups 44.0% at the top edge, truncation 4.9%, tokens 1480, easy pass 69.2%, hard pass 13.8%, u2 clip 0.0028, grad norm 0.07, load errors 0.9%. One miss: wrong 23.6% against 14-21%. Training fell back while val jumped, so segment training reward again failed to predict val.
+
+### Decision 31
+
+**CONTINUE** after eval e31 (24,800 rollouts used, validation pass rate 53.3%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e31 at 53.3 is the best eval of the run: +3.3+-2.5 over e30, +30.1+-3.7 over base, and the best trail-3 (48.7). Training now agrees with val: reward 0.504, pass 47.5%, hard pass 23.0% and no-submit 31.0% are all the best at this mix. Nothing is unstable: load errors 0.2%, u2 clip 0.003, grad norm 0.07. 1e-04 is the first recipe to leave the 44 plateau, so I change nothing. The next window drops e29 (42.7): e32 at 42.9 or higher sets a new best trail-3.
+
+**Prediction.** e32 val lands at 47-55%, putting trail-3 at 50.1-52.8, a new best. Paired SE against e31 stays at 2.0-3.0. Training: reward 0.43-0.53, pass 41-50%, partial 6-12%, no-submit 28-39%, wrong 16-25%, zero-groups 28-46%, truncation 3-7.5%, tokens 1400-1620. By pool: easy pass 65-77% of 400, hard pass 13-25% of 400. u2 clip ratio stays under 0.03, grad norm under 0.3, load errors under 2.5%.
+
+**Would change its mind if.** If e32 is 47 or higher, I continue to fill the window. If e32 lands at 43-46.9, I continue one more segment unless training reward also falls under 0.42. If e32 falls below 43, or training reward drops under 0.38, or load errors exceed 3%, or u2 clip exceeds 0.15, the rate is degrading the policy: I revert to e31 at about 5e-05, keeping e30 and e31 in the window. If truncation exceeds 8.5%, I drop hard_share to 0.25. I add no new knobs while this phase keeps rising.
+
+**Grade of its previous prediction.** Val too cautious again. Val 53.3 beat the predicted 43.5-50, and trail-3 48.7 beat 45.4-47.6; I expected regression from 50.0 and got a further gain. Paired SE 2.5 fell inside 2.0-3.0. Training beat several ranges: reward 0.504 (0.40-0.49), pass 47.5% (38-47%), hard pass 23.0% (11-21%). In range: partial 10.6% and no-submit 31.0% at their edges, wrong 21.2%, zero-groups 32.0%, truncation 4.5%, tokens 1510, easy pass 72.0%, u2 clip 0.0029, grad norm 0.07, load errors 0.2%. I treated e30 as mostly a high draw; two evals now say the level moved.
+
+### Decision 32
+
+**CONTINUE** after eval e32 (25,600 rollouts used, validation pass rate 55.5%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e32 at 55.5 is the best eval of the run and the best trail-3 (52.9): +2.3+-2.8 over e31, +32.4+-4.0 over base. n9 has risen three evals in a row (50.0, 53.3, 55.5), and training agrees strongly: reward 0.574, easy pass 78.0%, hard pass 31.8%, no-submit down from 31.0% to 18.5%. It met my continue line (47 or higher). Nothing is unstable: load errors 0.4%, u2 clip 0.002, grad norm 0.05. Wrong rose to 26.2% only because more rollouts submit. Zero-groups (48%) is the one figure to watch. I change nothing.
+
+**Prediction.** e33 val lands at 50-58.5%, putting trail-3 at 52.9-55.8; 50.3 or higher sets a new best. Paired SE against e32 stays at 2.0-3.0. Training: reward 0.50-0.62, pass 48-59%, partial 7-13%, no-submit 15-27%, wrong 20-30%, zero-groups 35-55%, truncation 2.5-7%, tokens 1300-1560, tools 7.0-8.5. By pool: easy pass 72-83% of 400, hard pass 22-36% of 400. u2 clip ratio stays under 0.03, grad norm under 0.3, load errors under 2.5%.
+
+**Would change its mind if.** If e33 is 50.3 or higher, I continue to fill the window. If e33 lands at 46-50.2, I continue one more segment unless training reward also falls under 0.48. If e33 falls below 46, or training reward drops under 0.42, or load errors exceed 3%, or u2 clip exceeds 0.15, the rate is degrading the policy: I revert to e32 at about 5e-05, keeping e31 and e32 in the window. If truncation exceeds 8.5%, I drop hard_share to 0.25. If zero-groups exceed 55% for two segments, I reconsider temperature. I add no knobs while the phase rises.
+
+**Grade of its previous prediction.** Too cautious again. Val 55.5 edged above the predicted 47-55, and trail-3 52.9 just above 50.1-52.8. Paired SE 2.8 fell inside 2.0-3.0. Training beat most ranges: reward 0.574 (0.43-0.53), pass 54.9% (41-50%), no-submit 18.5% (28-39%), easy pass 78.0% (65-77%), hard pass 31.8% (13-25%); wrong 26.2% and zero-groups 48.0% exceeded their tops. In range: partial 10.0%, truncation 4.0%, tokens 1410, u2 clip 0.0022, grad norm 0.05, load errors 0.4%. I did not anticipate the behaviour shift: tool calls jumped to 7.9 and no-submit fell 12.5 points in one segment.
+
+### Decision 33
+
+**CONTINUE** after eval e33 (26,400 rollouts used, validation pass rate 62.1%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e33 at 62.1 is the best eval and the best trail-3 (57.0): +6.5+-2.6 over e32, +38.9+-4.2 over base. n9 has risen four evals in a row. My truncation trigger fired (9.4% vs 8.5%), but I am not acting on it: dropping hard_share to 0.25 would alter a recipe gaining 2-7 points per eval and raise zero-groups (54%), since easy pass is 83%. The completion cap is already at its maximum. Nothing is unstable: load errors 0.2%, u2 clip 0.001, grad norm 0.05. e34 at 53.5 or higher sets a new best.
+
+**Prediction.** e34 val lands at 55-64%, some regression from 62.1 likely, putting trail-3 at 57.5-60.5; 53.5 or higher sets a new best. Paired SE against e33 stays at 2.0-3.0. Training: reward 0.52-0.63, pass 50-61%, partial 5-11%, no-submit 20-36%, wrong 10-24%, zero-groups 42-60%, truncation 5-11%, tokens 1450-1750, tools 6.8-8.2. By pool: easy pass 76-87% of 400, hard pass 22-36% of 400. u2 clip ratio stays under 0.03, grad norm under 0.3, load errors under 2.5%.
+
+**Would change its mind if.** If e34 is 53.5 or higher, I continue. If e34 lands at 50-53.4, I continue one more segment unless training reward falls under 0.50. If e34 falls below 50, or training reward drops under 0.45, or load errors exceed 3%, or u2 clip exceeds 0.15, I revert to e33 at about 5e-05, keeping e32 and e33 in the window. If truncation exceeds 12% with no-submit above 38%, the policy is looping to the cap: I start a new phase with hard_share 0.25. If zero-groups exceed 60%, I reconsider the mix.
+
+**Grade of its previous prediction.** Val too cautious again. Val 62.1 beat the predicted 50-58.5, and trail-3 57.0 beat 52.9-55.8. Paired SE 2.6 fell inside 2.0-3.0. In range: reward 0.569, pass 54.9%, partial 7.0% at the bottom edge, zero-groups 54.0% and easy pass 83.0% at their top edges, tools 7.36, hard pass 26.8%, u2 clip 0.0012, grad norm 0.05, load errors 0.2%. Misses: no-submit 33.9% (15-27%), wrong 11.0% (20-30%), truncation 9.4% (2.5-7%), tokens 1650 (1300-1560). I did not foresee the shift from wrong submissions to no submission and longer rollouts.
+
+### Decision 34
+
+**CONTINUE** after eval e34 (27,200 rollouts used, validation pass rate 57.8%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e34 at 57.8 met my continue line (53.5) and sets the best trail-3 (58.5). The 4.3+-1.9 drop follows a +6.5 jump; e33 and e34 average 60, above e32's 55.5. Warning signs: no-submit 46%, zero-groups 61% (past my 60% line), tokens 1900. But failures only moved from wrong submissions to no submission; pass fell within prompt-draw noise. The mix cannot fix zero-groups (easy 79%, hard 20% pass), and a temperature change now would confound a recipe that gained 15 points in five evals. Continuing keeps e33 and e34 in the window.
+
+**Prediction.** e35 val lands at 54-62.5%, putting trail-3 at 58.0-60.8; 55.8 or higher sets a new best. Paired SE against e34 stays at 1.7-2.7. Training: reward 0.46-0.58, pass 45-57%, partial 1.5-6%, no-submit 36-50%, wrong 3-10%, zero-groups 52-68%, truncation 4-10%, tokens 1700-2050, tools 7.0-8.0. By pool: easy pass 74-86% of 400, hard pass 16-29% of 400. u2 clip ratio stays under 0.01, grad norm under 0.2, load errors under 2%.
+
+**Would change its mind if.** If e35 is 55.8 or higher, I continue. If e35 lands at 53.5-55.7, I continue one more segment unless training reward falls under 0.47. If e35 falls below 53.5, or reward drops under 0.45, or no-submit exceeds 52%, the phase is declining: I revert to e33 at about 5e-05. If zero-groups exceed 65% with val under 58, I start a new phase with temperature 1.1 to restore within-group diversity. If truncation exceeds 12%, I reconsider hard_share 0.25. If u2 clip exceeds 0.15, I revert at a lower rate.
+
+**Grade of its previous prediction.** Val right, training missed. Val 57.8 fell inside the predicted 55-64 and trail-3 58.5 inside 57.5-60.5, a new best. Paired SE 1.9 came just under 2.0-3.0. In range: truncation 6.5%, tools 7.47, easy pass 78.8%, u2 clip 0.0007, grad norm 0.03, load errors 0.1%. Misses: reward 0.504 (0.52-0.63), pass 49.6% (50-61%), partial 2.4% (5-11%), no-submit 46.1% (20-36%), wrong 4.1% (10-24%), zero-groups 61.0% (42-60%), tokens 1900 (1450-1750), hard pass 20.5% (22-36%). I underestimated how far failures would keep shifting from wrong submissions to no submission.
+
+### Decision 35
+
+**CONTINUE** after eval e35 (28,000 rollouts used, validation pass rate 56.0%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e35 at 56.0 met my continue line (55.8) and edges the best trail-3 to 58.6. Val has slipped twice since e33's 62.1, but training just had its best segment: reward 0.632, easy pass 86.8%, hard pass 33.8%, no-submit back to 24.1%. Val has lagged training before (e8, e12, e30). Learning rate and hard_share are already at their maximum, so other tweaks mostly add risk. With 10 evals left, a real gain is worth more than redraws, and a revert to e33 or e34, whose windows hold 62.1, stays available as an endgame.
+
+**Prediction.** e36 val lands at 53.5-61%, putting trail-3 at 55.8-58.3; a new best needs 62.3, so I expect none this segment. Paired SE against e35 stays at 1.8-2.8. Training: reward 0.52-0.66, pass 50-63%, partial 3-10%, no-submit 20-42%, wrong 6-20%, zero-groups 55-72%, truncation 5-11%, tokens 1550-2000, tools 7.5-11.5. By pool: easy pass 78-90% of 400, hard pass 22-38% of 400. u2 clip ratio stays under 0.005, grad norm under 0.1, load errors under 1.5%.
+
+**Would change its mind if.** If e36 is 58 or higher, I continue. If e36 lands at 54-57.9, I continue one more segment only if training reward is 0.55 or higher. If e36 falls below 54, or reward drops under 0.50, or no-submit exceeds 45%, or zero-groups exceed 72%, or truncation exceeds 12%, the phase is declining: I revert to e33 at about 5e-05, keeping e32 and e33 in the window. If no path has beaten 58.6 with 2-3 evals left, I revert to e33 or e34 to use their windows.
+
+**Grade of its previous prediction.** Val right, training too pessimistic. Val 56.0 fell inside the predicted 54-62.5 near the bottom, and trail-3 58.6 inside 58.0-60.8, a new best by 0.1. Paired SE 2.3 fell inside 1.7-2.7. In range: zero-groups 65.0%, truncation 7.5%, tokens 1710, u2 clip 0.0007, grad norm 0.03, load errors 0.0%. Misses: reward 0.632 (0.46-0.58), pass 60.2% (45-57%), partial 7.9% (1.5-6%), no-submit 24.1% (36-50%), wrong 15.6% (3-10%), tools 10.3 (7.0-8.0), easy pass 86.8% (74-86%), hard pass 33.8% (16-29%). I extrapolated the shift to no submission; it reversed, and tool calls jumped.
+
+### Decision 36
+
+**CONTINUE** after eval e36 (28,800 rollouts used, validation pass rate 60.3%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e36 at 60.3 met my continue line (58): +4.3+-2.1 over e35, +37.2+-4.2 over base. Training had its best segment again: reward 0.64, easy pass 85.8%, hard pass 38.2%, no-submit 19.2%. The last four evals average 59 and training still trends up, so with 9 evals left a real gain is worth more than redraws. Learning rate and hard_share are at maximum, and nothing is unstable: load errors 0.5%, u2 clip 0.0005. Figures to watch: truncation 10.1%, zero-groups 64%, tools 11.9. e37 at 59.8 or higher sets a new best trail-3.
+
+**Prediction.** e37 val lands at 55.5-63.5%, putting trail-3 at 57.3-59.9; 59.8 or higher sets a new best, about an even chance. Paired SE against e36 stays at 1.8-2.8. Training: reward 0.56-0.69, pass 54-67%, partial 5-11%, no-submit 13-30%, wrong 12-23%, zero-groups 56-72%, truncation 6-12.5%, tokens 1650-2000, tools 9.5-13.5. By pool: easy pass 80-91% of 400, hard pass 28-44% of 400. u2 clip ratio stays under 0.005, grad norm under 0.1, load errors under 1.5%.
+
+**Would change its mind if.** If e37 is 59.8 or higher, I continue. If e37 lands at 55.5-59.7, I continue one more segment only if training reward is 0.58 or higher. If e37 falls below 55.5, or reward drops under 0.52, or no-submit exceeds 40%, or truncation exceeds 13%, or zero-groups exceed 72%, the phase is declining: I revert to e36 at about 5e-05, keeping e35 and e36 in the window. If no path has beaten 58.6 with 2-3 evals left, I revert to e34 at a minimal rate, whose window needs only 56.3.
+
+**Grade of its previous prediction.** Right on nearly every figure. Val 60.3 fell inside the predicted 53.5-61 near the top, and trail-3 58.0 inside 55.8-58.3; as expected, no new best. Paired SE 2.1 fell inside 1.8-2.8. In range: reward 0.64, pass 62.0%, partial 8.2%, wrong 18.2%, zero-groups 64.0%, truncation 10.1%, tokens 1830, easy pass 85.8%, u2 clip 0.0005, grad norm 0.03, load errors 0.5%. Marginal misses, all on the favourable side: no-submit 19.2% (20-42%), hard pass 38.2% (22-38%), tools 11.9 (7.5-11.5). Training repeated its strong e35 segment, so that was not prompt-draw noise.
+
+### Decision 37
+
+**CONTINUE** after eval e37 (29,600 rollouts used, validation pass rate 58.5%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e37 at 58.5 is -1.8+-2.1 from e36, within noise; the last five evals average 59. My reward trigger fired (0.508 under 0.52), but I depart from it: e34 showed the same dip (0.504) and the next two segments were the phase's best. The rule's revert to e36 would need 59.8 for a new best trail-3; staying on e37 (window 60.3, 58.5) needs only 57.3. Hard pass 16.0% comes from 50 fresh prompts and is noisy. 1e-04 is the only recipe that has moved val, so I keep it.
+
+**Prediction.** e38 val lands at 55-62.5%, putting trail-3 at 57.9-60.4; 57.3 or higher sets a new best, about a 70% chance. Paired SE against e37 stays at 1.8-2.8. Training rebounds partly: reward 0.50-0.66, pass 48-64%, partial 4-10%, no-submit 16-38%, wrong 10-22%, zero-groups 60-75%, truncation 5-11.5%, tokens 1700-2050, tools 9.5-13.5. By pool: easy pass 79-90% of 400, hard pass 16-38% of 400. u2 clip ratio stays under 0.003, grad norm under 0.08, load errors under 1.5%.
+
+**Would change its mind if.** If e38 is 57.3 or higher, I continue. If e38 is 54.5-57.2 with reward 0.55 or higher, I continue one segment. If e38 is below 57.3 with reward under 0.52 again, or e38 falls below 54.5, or no-submit exceeds 40%, or truncation exceeds 13%, the phase is declining: I revert to e37 at about 3e-05, whose window still needs only 57.3. With 3 evals left and no live path setting bests, I revert to e33 at 1e-06 and hold: its window needs 58.5 and the next one contains 62.1.
+
+**Grade of its previous prediction.** Val right, training missed. Val 58.5 fell inside the predicted 55.5-63.5 and trail-3 58.3 inside 57.3-59.9, short of the 59.8 needed for a new best. Paired SE 2.1 fell inside 1.8-2.8. In range: partial 6.5%, wrong 18.4%, zero-groups 71.0% at the top edge, truncation 6.9%, tokens 1940, tools 11.8, easy pass 81.8%, u2 clip 0.0004, grad norm 0.02, load errors 0.4%. Misses: reward 0.508 (0.56-0.69), pass 48.9% (54-67%), no-submit 32.4% (13-30%), hard pass 16.0% (28-44%). I called e35-e36 a new training level; hard pass then halved.
+
+### Decision 38
+
+**CONTINUE** after eval e38 (30,400 rollouts used, validation pass rate 60.3%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e38 at 60.3 met my continue line (57.3) and sets the best trail-3 of the run (59.7): +1.8+-2.4 over e37, +37.2+-4.1 over base. Training had its best segment: reward 0.677, pass 66.1%, hard pass 46.0%, load errors 0.0%. The e37 dip was prompt-draw noise, as e34's was. Nothing is unstable: u2 clip 0.0006, grad norm 0.03, truncation 7.1%. Learning rate and hard_share are at maximum, and 1e-04 is the only recipe that has moved val. With 7 evals left, I keep it; e39 at 60.6 or higher sets a new best.
+
+**Prediction.** e39 val lands at 56.5-64%, putting trail-3 at 58.4-60.9; 60.6 or higher sets a new best, about a 40% chance. Paired SE against e38 stays at 1.8-2.8. Training: reward 0.54-0.70, pass 52-68%, partial 4-10%, no-submit 16-36%, wrong 8-20%, zero-groups 58-74%, truncation 5-11.5%, tokens 1700-2050, tools 9.5-13. By pool: easy pass 80-90% of 400, hard pass 22-48% of 400. u2 clip ratio stays under 0.003, grad norm under 0.08, load errors under 1.5%.
+
+**Would change its mind if.** If e39 is 60.6 or higher, I continue. If e39 lands at 56-60.5, I continue while training reward is 0.55 or higher. If e39 falls below 56, or reward drops under 0.50, or no-submit exceeds 40%, or truncation exceeds 13%, the phase is declining: I revert to e38 at about 3e-05, whose window (58.5, 60.3) still needs only 60.6. With 2-3 evals left and no live path setting bests, I revert to e34 at 1e-06 and hold: its window (62.1, 57.8) needs only 59.3.
+
+**Grade of its previous prediction.** Val right, training too pessimistic. Val 60.3 fell inside the predicted 55-62.5 and trail-3 59.7 inside 57.9-60.4, a new best above the 57.3 I needed. Paired SE 2.4 fell inside 1.8-2.8. In range: partial 5.8%, no-submit 23.9%, wrong 10.0% at the bottom edge, zero-groups 64.0%, truncation 7.1%, tokens 1850, tools 11, easy pass 86.2%, u2 clip 0.0006, grad norm 0.03, load errors 0.0%. Misses, all favourable: reward 0.677 (0.50-0.66), pass 66.1% (48-64%), hard pass 46.0% (16-38%). I expected a partial rebound; training set its best segment instead.
+
+> Budget extended by hand from 36,000 to 48,000 rollouts (2026-11-19).
+
+### Decision 39
+
+**CONTINUE** after eval e39 (31,200 rollouts used, validation pass rate 63.1%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e39 at 63.1 is the best eval and best trail-3 of the run (60.6): +2.8+-2.4 over e38, +40.0+-4.2 over base, meeting my continue line (60.6). Training is healthy: reward 0.612, easy pass 89.0% (phase best), hard pass 31.0%, load errors 0.0%, truncation 5.0%, u2 clip 0.0006. Correction: 21 evals remain, not the 7 I wrote last time, so real gains matter more than window management. 1e-04 is the only recipe that has moved val, and learning rate and hard_share are at maximum. Zero-groups (63%) has been stable for six segments. I change nothing.
+
+**Prediction.** e40 val lands at 58.5-66.5%, putting trail-3 at 60.6-63.3; 58.8 or higher sets a new best, about a 70% chance. Paired SE against e39 stays at 1.8-2.8. Training: reward 0.54-0.70, pass 52-68%, partial 4-10%, no-submit 16-36%, wrong 7-20%, zero-groups 58-74%, truncation 4-11%, tokens 1750-2050, tools 9.5-13. By pool: easy pass 82-92% of 400, hard pass 22-46% of 400. u2 clip ratio stays under 0.003, grad norm under 0.08, load errors under 1.5%.
+
+**Would change its mind if.** If e40 is 58.8 or higher, I continue. If e40 lands at 56-58.7, I continue while training reward is 0.55 or higher. If e40 falls below 56, or reward drops under 0.50, or no-submit exceeds 40%, or truncation exceeds 13%, the phase is declining: I revert to e39 at about 5e-05, whose window (60.3, 63.1) needs only 58.8. If val stays flat at 58-63 for four more evals with zero-groups above 70%, I start a new phase with temperature 1.1 to restore within-group diversity.
+
+**Grade of its previous prediction.** Right on every figure. Val 63.1 fell inside the predicted 56.5-64 near the top, and trail-3 60.6 inside 58.4-60.9, a new best at exactly the 60.6 line I gave a 40% chance. Paired SE 2.4 fell inside 1.8-2.8. In range: reward 0.612, pass 60.0%, partial 6.1%, no-submit 30.4%, wrong 9.6%, zero-groups 63.0%, truncation 5.0% at the bottom edge, tokens 1940, tools 10.6, easy pass 89.0% near the top, hard pass 31.0%, u2 clip 0.0006, grad norm 0.04, load errors 0.0%. One error outside the prediction: I miscounted the evals left as 7; 21 remain.
+
+### Decision 40
+
+**CONTINUE** after eval e40 (32,000 rollouts used, validation pass rate 58.5%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e40 at 58.5 is -4.5+-3.7 from e39, about 1.2 paired SE, and falls in my continue band (56-58.7 with reward 0.55 or higher; reward was 0.66). No trigger fired: no-submit 28.4%, truncation 11.8% (limit 13%). The segment was a behaviour shift: tools 10.6 to 8.1, zero-groups 63% to 46%, grad norm doubled, hard pass 46%; e32's similar shift preceded a val jump. Val has averaged 59.6 over eight evals, so 58.5 is an ordinary draw. Reverting to e39 would discard 800 rollouts to lower the next bar from 60.6 to 58.8; that option stays open later.
+
+**Prediction.** e41 val lands at 56.5-64%, putting trail-3 at 59.4-61.9; 60.6 or higher sets a new best, about a 40% chance. Paired SE against e40 is 2.0-3.4. Training: reward 0.54-0.70, pass 52-68%, partial 4-9%, no-submit 18-36%, wrong 6-18%, zero-groups 45-70%, truncation 6-13%, tokens 1700-2000, tools 7.5-11.5. By pool: easy pass 80-90% of 400, hard pass 26-48% of 400. u2 clip ratio stays under 0.003, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e41 is 60.6 or higher, I continue. If e41 lands at 56-60.5, I continue while training reward is 0.55 or higher. If e41 falls below 56, or reward drops under 0.50, or no-submit exceeds 40%, or truncation exceeds 13%, the e40 shift was harmful: I revert to e39 at about 5e-05, whose window (60.3, 63.1) needs only 58.8. If no new best trail-3 appears by e43, I test temperature 1.1 from the best checkpoint. With 3 evals left, I revert to the best two-eval pair and hold.
+
+**Grade of its previous prediction.** In range but at the bottom. Val 58.5 sat at the bottom edge of the predicted 58.5-66.5 and trail-3 60.6 at the bottom of 60.6-63.3, tying e39 rather than beating it (58.8 was needed). In range: reward 0.66, pass 64.2%, partial 5.2%, no-submit 28.4%, wrong 7.4%, tokens 1800, easy pass 82.5% and hard pass 46.0% at their edges, u2 clip 0.0013, grad norm 0.06, load errors 0.0%. Misses: paired SE 3.7 (1.8-2.8), zero-groups 46.0% (58-74%), truncation 11.8% (4-11%), tools 8.09 (9.5-13). I did not foresee the behaviour shift.
+
+### Decision 41
+
+**CONTINUE** after eval e41 (32,800 rollouts used, validation pass rate 62.8%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e41 at 62.8 met my continue line (60.6) and sets the best trail-3 of the run (61.5): +4.3+-3.8 over e40, +39.7+-3.9 over base. The e40 behaviour shift did no harm: tools fell to 6.7, tokens to 1640, truncation back to 6.8%, hard pass 40.5% for a second strong segment, load errors 0.0%. No trigger fired: reward 0.634, no-submit 30.9%. The last four evals average 61.2 against 59.0 for e33-e36, a slow rise. 1e-04 is the only recipe that has moved val, so with 19 evals left I keep it.
+
+**Prediction.** e42 val lands at 57.5-65.5%, putting trail-3 at 59.6-62.3; 63.3 or higher sets a new best, about a 30% chance. Paired SE against e41 is 2.0-3.8. Training: reward 0.54-0.70, pass 52-68%, partial 4-9%, no-submit 20-38%, wrong 5-16%, zero-groups 45-68%, truncation 5-12%, tokens 1550-1900, tools 6-9.5. By pool: easy pass 78-90% of 400, hard pass 28-48% of 400. u2 clip ratio stays under 0.003, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e42 is 63.3 or higher, I continue. If e42 lands at 57-63.2, I continue while training reward is 0.55 or higher. If e42 falls below 57, or reward drops under 0.50, or no-submit exceeds 40%, or truncation exceeds 13%, the phase is declining: I revert to e41 at about 5e-05. If no new best trail-3 appears by e44, I test temperature 1.1 from the best checkpoint to restore within-group diversity. With 3 evals left, I revert to the best two-eval pair and hold at a minimal rate.
+
+**Grade of its previous prediction.** Mostly right. Val 62.8 fell inside the predicted 56.5-64 near the top, and trail-3 61.5 inside 59.4-61.9, a new best above the 60.6 line I gave a 40% chance. In range: reward 0.634, pass 61.3%, partial 5.5%, no-submit 30.9%, wrong 7.9%, zero-groups 59.0%, truncation 6.8%, easy pass 82.0%, hard pass 40.5%, u2 clip 0.0011, grad norm 0.05, load errors 0.0%. Misses: paired SE 3.8 (2.0-3.4), tokens 1640 (1700-2000), tools 6.71 (7.5-11.5). The shift to shorter rollouts with fewer tool calls went further than I expected.
+
+### Decision 42
+
+**CONTINUE** after eval e42 (33,600 rollouts used, validation pass rate 64.8%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e42 at 64.8 is the best eval and best trail-3 of the run (62.1): +2.0+-3.0 over e41, +41.7+-3.9 over base, meeting my continue line (63.3). No trigger fired: reward 0.597, no-submit 35.0% (limit 40%), truncation 11.8% (limit 13%), load errors 0.0%, u2 clip 0.0006. Those two figures and zero-groups (67%) sit near their limits, and 23 hard tasks are now rested, so I watch them. 1e-04 is the only recipe that has moved val, and the last three evals are the best window yet. With 18 evals left I change nothing.
+
+**Prediction.** e43 val lands at 59-67%, putting trail-3 at 62.2-64.9; 58.8 or higher sets a new best, about a 75% chance. Paired SE against e42 is 2.0-3.8. Training: reward 0.54-0.70, pass 52-68%, partial 3.5-9%, no-submit 22-40%, wrong 5-15%, zero-groups 50-72%, truncation 6-13%, tokens 1600-1950, tools 6-9. By pool: easy pass 78-90% of 400, hard pass 26-48% of 400; rested hard tasks rise to 25-60. u2 clip ratio stays under 0.003, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e43 is 58.8 or higher, I continue. If e43 lands at 57-58.7, I continue while training reward is 0.55 or higher. If e43 falls below 57, or reward drops under 0.50, or no-submit exceeds 40%, or truncation exceeds 13%, the phase is declining: I revert to e42 at about 5e-05, whose window (62.8, 64.8) needs only 58.8. If zero-groups exceed 70% for two segments with no new best trail-3, I test temperature 1.1 from the best checkpoint. With 3 evals left, I stop experimenting and stay on the path with the best two-eval pair.
+
+**Grade of its previous prediction.** Right on every figure. Val 64.8 fell inside the predicted 57.5-65.5 near the top, and trail-3 62.1 inside 59.6-62.3, a new best above the 63.3 line I gave a 30% chance. Paired SE 3.0 fell inside 2.0-3.8. In range: reward 0.597, pass 58.2%, partial 4.9%, no-submit 35.0%, wrong 6.8%, zero-groups 67.0% and truncation 11.8% at their top edges, tokens 1820, tools 6.54, easy pass 81.5%, hard pass 35.0%, u2 clip 0.0006, grad norm 0.04, load errors 0.0%. Not predicted: rested hard tasks jumped from 2 to 23.
+
+### Decision 43
+
+**CONTINUE** after eval e43 (34,400 rollouts used, validation pass rate 64.1%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e43 at 64.1 met my continue line (58.8) and sets the best trail-3 of the run (63.9): -0.8+-3.1 from e42, +40.9+-4.3 over base. The last three evals (62.8, 64.8, 64.1) beat the three before (60.3, 63.1, 58.5), so n9 still rises slowly. Training is healthy: reward 0.648, hard pass 41.8%, no-submit 28.1%, truncation down to 3.1%, load errors 0.2%, u2 clip 0.0007. No trigger fired; zero-groups (68%) stays under 70%. Rested hard tasks (42) reflect the hard pool wrapping, not instability. 1e-04 is the only recipe that has moved val; I change nothing.
+
+**Prediction.** e44 val lands at 59.5-67.5%, putting trail-3 at 62.8-65.5; 63.1 or higher sets a new best, about a 50% chance. Paired SE against e43 is 2.0-3.8. Training: reward 0.55-0.70, pass 53-68%, partial 3.5-9%, no-submit 20-38%, wrong 5-15%, zero-groups 55-74%, truncation 2.5-11%, tokens 1450-1900, tools 6-9. By pool: easy pass 78-90% of 400, hard pass 28-50% of 400; rested hard tasks rise to 50-90. u2 clip ratio stays under 0.003, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e44 is 63.1 or higher, I continue. If e44 lands at 58-63, I continue while training reward is 0.55 or higher. If e44 falls below 58, or reward drops under 0.50, or no-submit exceeds 40%, or truncation exceeds 13%, the phase is declining: I revert to e43 at about 5e-05, whose window (64.8, 64.1) needs only 63.1. If zero-groups exceed 70% for two segments with no new best trail-3, I test temperature 1.1 from the best checkpoint. With 3 evals left, I stop experimenting and stay on the path with the best two-eval pair.
+
+**Grade of its previous prediction.** Right on nearly every figure. Val 64.1 fell inside the predicted 59-67, and trail-3 63.9 inside 62.2-64.9, a new best above the 58.8 line I gave a 75% chance. Paired SE 3.1 fell inside 2.0-3.8. In range: reward 0.648, pass 62.9%, partial 6.2%, no-submit 28.1%, wrong 8.8%, zero-groups 68.0%, tools 6.65, easy pass 84.0%, hard pass 41.8%, rested hard tasks 42, u2 clip 0.0007, grad norm 0.04, load errors 0.2%. Two misses, both favourable: truncation 3.1% (6-13%) and tokens 1540 (1600-1950). Rollouts got shorter than I expected.
+
+### Decision 44
+
+**REVERT to e43** after eval e44 (35,200 rollouts used, validation pass rate 56.3%). Settings changed: none.
+
+Settings from here: learning rate 0.0001, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e44 fell 7.8+-3.5 to 56.3, below my 58 revert line, with a behaviour shift: no-submit 28% to 10.5%, wrong 9% to 39%, pass 63% to 51%. Reverting to e43 restarts from the 64.1 checkpoint with window (64.8, 64.1); continuing would need 71.3. I depart from the planned 5e-05: at 1e-04 trail-3 never fell from e36 to e43, earlier dips recovered, and rates of 3e-05 or less sat flat for 14 evals. One collapse in 17 segments may be stochastic, so I redraw the segment unchanged; the banked 63.9 is safe.
+
+**Prediction.** e45 (on the e43 path) val lands at 58.5-66.5%, putting trail-3 at 62.5-65.1; 63.1 or higher sets a new best, about a 40% chance. Paired SE against e43 is 2.2-3.8. Training, on the same prompt stream as e44: reward 0.52-0.68, pass 50-66%, partial 4-10%, no-submit 15-36%, wrong 6-25%, zero-groups 55-72%, truncation 2.5-10%, tokens 1350-1850, tools 6-8.5. By pool: easy pass 76-88% of 400, hard pass 26-46% of 400; rested hard tasks 48-75. u2 clip ratio stays under 0.003, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e45 is 63.1 or higher, I continue. If e45 lands at 58-63 without the submit shift (no-submit 15% or more, wrong 25% or less), I continue at 1e-04. If e45 falls below 58, or the shift recurs (no-submit under 15% with wrong above 30%), the collapse is systematic at this rate: I revert to e43 at 5e-05. If truncation exceeds 13% or no-submit exceeds 40%, same revert. With 3 evals left, I stop experimenting and stay on the path with the best two-eval pair.
+
+**Grade of its previous prediction.** Val missed badly. Val 56.3 fell below the predicted 59.5-67.5 and trail-3 61.7 below 62.8-65.5; I gave a new best a 50% chance. Paired SE 3.5 fell inside 2.0-3.8. Training misses: reward 0.533 (0.55-0.70), pass 50.6% (53-68%), partial 11.1% (3.5-9%), no-submit 10.5% (20-38%), wrong 38.9% (5-15%), tokens 1320 (1450-1900), easy pass 75.0% (78-90%), hard pass 26.2% (28-50%). In range: zero-groups 61.0%, truncation 2.9%, tools 6.41, rested hard tasks 57, u2 clip 0.0011, grad norm 0.06, load errors 0.0%. I did not foresee the swing from no submission to wrong submissions.
+
+### Decision 45
+
+**REVERT to e43** after eval e45 (36,000 rollouts used, validation pass rate 50.0%). Settings changed: learning rate 0.0001 to 1e-05.
+
+Settings from here: learning rate 1e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e45 fell to 50.0, -14.1+-3.2 from e43: a second collapse from e43 at 1e-04 with the same signature (no-submit 11%, wrong 32%, tools 5.4). It is systematic, so I revert to e43, whose window (64.8, 64.1) needs 63.1. I go below the planned 5e-05: both branches showed the shift at full strength within one segment, so either e43 already samples this way or 1e-04 tips it within a few updates. 1e-05 on the same prompt stream tells these apart and keeps weights near the 64.1 checkpoint. All other knobs unchanged.
+
+**Prediction.** e46 (on the e43 path) val lands at 59.5-66%, putting trail-3 at 62.8-65.0; 63.1 or higher sets a new best, about a 45% chance. Paired SE against e43 is 1.5-2.8. I expect (60%) the submit signature to persist at 1e-05: reward 0.54-0.66, pass 51-64%, partial 6-12%, no-submit 8-20%, wrong 20-38%, zero-groups 52-68%, truncation 2-6%, tokens 1280-1550, tools 5.3-6.8; easy pass 75-87%, hard pass 26-42%; rested hard tasks 50-65. u2 clip ratio under 0.001, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e46 is 63.1 or higher, I continue at 1e-05. If the signature is absent (no-submit 22% or more, wrong 15% or less) and e46 is 61 or higher, the 1e-04 step size caused the collapse: I raise to 3e-05 from the best-window checkpoint. If e46 is below 63.1 with the signature present, I revert to e43 at 2e-06, which again needs only 63.1. If e46 falls below 58 even at 1e-05, e43's neighbourhood is fragile: I revert to e42 at 1e-05. I keep the last 3 evals for holds from the best two-eval pair.
+
+**Grade of its previous prediction.** Val missed badly. Val 50.0 fell far below the predicted 58.5-66.5 and trail-3 59.6 below 62.5-65.1; I gave a new best a 40% chance. Paired SE 3.2 fell inside 2.2-3.8. Training misses: no-submit 11.1% (15-36%), wrong 32.0% (6-25%), tools 5.41 (6-8.5). In range: reward 0.587, pass 56.0%, partial 9.8%, zero-groups 55.0% and tokens 1350 at their bottom edges, truncation 3.5%, easy pass 80.2%, hard pass 31.8%, rested hard tasks 57, u2 clip 0.0019, grad norm 0.08, load errors 0.9%. I treated e44 as possibly stochastic; the shift recurred, so it is systematic.
+
+### Decision 46
+
+**NEW_PHASE** after eval e46 (36,800 rollouts used, validation pass rate 65.1%). Settings changed: learning rate 1e-05 to 3e-05.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e46 at 65.1 is the best eval and best trail-3 of the run (64.7): +1.0+-2.0 over e43. On the prompts where 1e-04 collapsed twice, 1e-05 showed no signature (no-submit 23.8%, wrong 12.4%, reward 0.665), so step size caused the collapse, not e43. Both plan branches fire; I take the raise. Rates of 1e-05 or less were flat earlier, and 14 evals remain. 3e-05 is the geometric midpoint between the safe and the collapsing rate. The banked 64.7 is safe; a failed trial costs one segment. Other knobs and optimizer state unchanged.
+
+**Prediction.** e47 val lands at 61.5-67.5%, putting trail-3 at 63.6-65.6; 65.1 or higher sets a new best, about a 35% chance. Paired SE against e46 is 1.8-3.0. I give the collapse signature a 30% chance. Otherwise training: reward 0.56-0.70, pass 54-68%, partial 5-10%, no-submit 16-32%, wrong 8-20%, zero-groups 56-72%, truncation 2.5-8%, tokens 1380-1700, tools 5.9-7.2. By pool: easy pass 79-90% of 400, hard pass 30-48% of 400; rested hard tasks 62-82. u2 clip ratio under 0.0015, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e47 is 65.1 or higher, I continue at 3e-05. If e47 lands at 61.5-65.0 without the signature (no-submit 15% or more, wrong 25% or less), I continue one more segment. If e47 falls below 61.5, or the signature appears (no-submit under 15% with wrong above 25%), 3e-05 is also too large here: I revert to e46 at 1e-05, whose window (64.1, 65.1) needs 65.1, and stay at 1e-05 or lower. If 3e-05 holds flat for three evals, I consider 5e-05. I keep the last 3 evals for low-rate holds from the best two-eval pair.
+
+**Grade of its previous prediction.** Val right, signature call wrong. Val 65.1 fell inside the predicted 59.5-66 and trail-3 64.7 inside 62.8-65.0, a new best above the 63.1 line I gave a 45% chance. Paired SE 2.0 fell inside 1.5-2.8. I gave 60% to the submit signature persisting at 1e-05; it did not: no-submit 23.8% (8-20%), wrong 12.4% (20-38%), reward 0.665 (0.54-0.66). In range: pass 63.7%, partial 8.8%, zero-groups 65.0%, truncation 3.6%, tokens 1490, tools 6.42, easy pass 86.8%, hard pass 40.8%, rested hard tasks 58, u2 clip 0.0004, grad norm 0.05, load errors 0.1%.
+
+### Decision 47
+
+**CONTINUE** after eval e47 (37,600 rollouts used, validation pass rate 66.3%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e47 at 66.3 is the best eval and best trail-3 of the run (65.2): +1.3+-2.2 over e46, +43.2+-3.9 over base, meeting my continue line (65.1). At 3e-05 the collapse signature is absent: no-submit 31.5%, wrong 9.4%, load errors 0.0%, u2 clip 0.0005. Hard pass 43.2% is strong; easy pass 75.0% is low, but e37 showed that single-segment pool dips are prompt-draw noise. Three evals in a row have risen from e43. With 13 evals left and a working rate, I change nothing.
+
+**Prediction.** e48 val lands at 62-68.5%, putting trail-3 at 64.5-66.6; 64.3 or higher sets a new best, about a 60% chance. Paired SE against e47 is 1.8-3.0. I give the collapse signature a 20% chance. Otherwise training: reward 0.56-0.70, pass 54-68%, partial 5-10%, no-submit 18-36%, wrong 6-18%, zero-groups 52-70%, truncation 3-9%, tokens 1450-1850, tools 6.2-7.8. By pool: easy pass 74-88% of 400, hard pass 32-48% of 400; rested hard tasks 62-85. u2 clip ratio under 0.0015, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e48 is 64.3 or higher, I continue at 3e-05. If e48 lands at 61.5-64.2 without the signature (no-submit 15% or more, wrong 25% or less), I continue one more segment. If e48 falls below 61.5, or the signature appears (no-submit under 15% with wrong above 25%), or truncation exceeds 13%, or no-submit exceeds 40%, I revert to e47 at 1e-05, whose window (65.1, 66.3) needs only 64.3. If 3e-05 holds flat for three evals, I consider 5e-05. I keep the last 3 evals for low-rate holds from the best two-eval pair.
+
+**Grade of its previous prediction.** Right on nearly every figure. Val 66.3 fell inside the predicted 61.5-67.5 and trail-3 65.2 inside 63.6-65.6, a new best above the 65.1 line I gave a 35% chance. Paired SE 2.2 fell inside 1.8-3.0. The collapse signature (30% chance) did not appear. In range: reward 0.62, pass 59.1%, partial 8.0%, no-submit 31.5%, wrong 9.4%, zero-groups 56.0% at the bottom edge, truncation 6.1%, tools 7.2 at the top edge, hard pass 43.2%, rested hard tasks 65, u2 clip 0.0005, grad norm 0.05, load errors 0.0%. Misses: tokens 1770 (1380-1700), easy pass 75.0% (79-90%).
+
+> Budget extended by hand from 48,000 to 60,000 rollouts (2026-11-20).
+
+### Decision 48
+
+**CONTINUE** after eval e48 (38,400 rollouts used, validation pass rate 68.1%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e48 at 68.1 is the best eval and best trail-3 of the run (66.5): +1.8+-2.2 over e47, +45.0+-4.0 over base, meeting my continue line (64.3). Val has risen four evals in a row from e43. At 3e-05 the collapse signature stays absent: no-submit 27.5%, wrong 11.1%, load errors 0.0%, u2 clip 0.0005. Easy pass recovered to 82.2% and hard pass held at 40.5%. Tools rose to 8.96, which n9 tolerated at 10-12. Correction: 27 evals remain, not the 13 I wrote last time. The rate works, so I change nothing.
+
+**Prediction.** e49 val lands at 63.5-70%, putting trail-3 at 66.0-68.1; 65.3 or higher sets a new best, about a 60% chance. Paired SE against e48 is 1.8-3.0. I give the collapse signature a 15% chance. Otherwise training: reward 0.56-0.70, pass 54-68%, partial 5-10%, no-submit 18-36%, wrong 6-18%, zero-groups 50-68%, truncation 3-10%, tokens 1550-1950, tools 7-11. By pool: easy pass 75-88% of 400, hard pass 32-48% of 400; rested hard tasks 55-80. u2 clip ratio under 0.0015, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e49 is 65.3 or higher, I continue at 3e-05. If e49 lands at 62-65.2 without the signature (no-submit 15% or more, wrong 25% or less), I continue one more segment. If e49 falls below 62, or the signature appears (no-submit under 15% with wrong above 25%), or truncation exceeds 13%, or no-submit exceeds 40%, I revert to e48 at 1e-05, whose window (66.3, 68.1) needs only 65.3. If 3e-05 holds flat for three evals, I consider 5e-05. I keep the last 3 evals for low-rate holds from the best two-eval pair.
+
+**Grade of its previous prediction.** Right on nearly every figure. Val 68.1 fell inside the predicted 62-68.5 near the top, and trail-3 66.5 inside 64.5-66.6, a new best above the 64.3 line I gave a 60% chance. Paired SE 2.2 fell inside 1.8-3.0. The collapse signature (20% chance) did not appear. In range: reward 0.638, pass 61.4%, partial 7.9%, no-submit 27.5%, wrong 11.1%, zero-groups 56.0%, truncation 5.6%, tokens 1780, easy pass 82.2%, hard pass 40.5%, u2 clip 0.0005, grad norm 0.05, load errors 0.0%. Misses: tools 8.96 (6.2-7.8), rested hard tasks 61 (62-85).
+
+### Decision 49
+
+**CONTINUE** after eval e49 (39,200 rollouts used, validation pass rate 70.9%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e49 at 70.9 is the best eval and best trail-3 of the run (68.4): +2.8+-1.8 over e48, +47.7+-4.2 over base, meeting my continue line (65.3). Val has risen five evals in a row from e43. Training is the strongest yet: reward 0.732, easy pass 89.8%, hard pass 53.5%, wrong 5.9%, truncation 3.1%, load errors 0.0%, u2 clip 0.0003. The collapse signature is absent (no-submit 22.5%). Zero-groups rose to 67%, under my 70% watch line. With 26 evals left and 3e-05 still producing gains, I change nothing.
+
+**Prediction.** e50 val lands at 66-73.5%, putting trail-3 at 68.3-70.8; 66.6 or higher sets a new best, about a 65% chance. Paired SE against e49 is 1.6-2.8. I give the collapse signature a 10% chance. Otherwise training: reward 0.60-0.76, pass 58-74%, partial 4-9%, no-submit 16-34%, wrong 4-15%, zero-groups 55-72%, truncation 2.5-9%, tokens 1500-1900, tools 7.5-11. By pool: easy pass 80-91% of 400, hard pass 38-56% of 400; rested hard tasks 50-80. u2 clip ratio under 0.0015, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e50 is 66.6 or higher, I continue at 3e-05. If e50 lands at 64-66.5 without the signature (no-submit 15% or more, wrong 25% or less), I continue one more segment. If e50 falls below 64, or the signature appears (no-submit under 15% with wrong above 25%), or truncation exceeds 13%, or no-submit exceeds 40%, I revert to e49 at 1e-05, whose window (68.1, 70.9) needs only 66.6. If zero-groups exceed 70% for two segments with flat val, I test temperature 1.1. I keep the last 3 evals for low-rate holds.
+
+**Grade of its previous prediction.** Too cautious. Val 70.9 landed above the predicted 63.5-70 and trail-3 68.4 above 66.0-68.1, a new best past the 65.3 line I gave a 60% chance. Paired SE 1.8 sat at the bottom edge of 1.8-3.0. The collapse signature (15% chance) did not appear. Misses, all favourable: reward 0.732 (0.56-0.70), pass 71.6% (54-68%), wrong 5.9% (6-18%), easy pass 89.8% (75-88%), hard pass 53.5% (32-48%). In range: partial 5.0%, no-submit 22.5%, zero-groups 67.0%, truncation 3.1%, tokens 1660, tools 9.23, rested hard tasks 56, u2 clip 0.0003, grad norm 0.05, load errors 0.0%.
+
+### Decision 50
+
+**CONTINUE** after eval e50 (40,000 rollouts used, validation pass rate 70.9%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e50 at 70.9 matched e49 (+0.0+-1.6) and sets the best trail-3 of the run (69.9): +47.7+-3.8 over base, meeting my continue line (66.6). Training repeated e49's strong segment: reward 0.737, easy pass 90.8%, hard pass 52.2%, wrong 5.6%, truncation 4.2%, load errors 0.0%, u2 clip 0.0003. The collapse signature is absent (no-submit 22.9%). Zero-groups reached 71%, the first segment over my 70% watch line; my rule needs two such segments with flat val before I test temperature 1.1. One flat eval after five rises is not yet a plateau, so I change nothing.
+
+**Prediction.** e51 val lands at 66.5-73.5%, putting trail-3 at 69.4-71.8; 68.3 or higher sets a new best, about a 70% chance. Paired SE against e50 is 1.5-2.8. I give the collapse signature a 10% chance. Otherwise training: reward 0.62-0.78, pass 60-76%, partial 3.5-8%, no-submit 16-32%, wrong 4-13%, zero-groups 58-76%, truncation 2.5-8%, tokens 1500-1850, tools 7.5-11. By pool: easy pass 82-93% of 400, hard pass 40-58% of 400; rested hard tasks 45-75, rested easy tasks 28-45. u2 clip ratio under 0.0015, grad norm under 0.09, load errors under 1.5%.
+
+**Would change its mind if.** If e51 is 68.3 or higher, I continue at 3e-05. If e51 lands at 65.5-68.2 without the signature (no-submit 15% or more, wrong 25% or less), I continue one more segment. If e51 falls below 65.5, or the signature appears (no-submit under 15% with wrong above 25%), or truncation exceeds 13%, or no-submit exceeds 40%, I revert to e50 at 1e-05, whose window (70.9, 70.9) needs only 68.3. If zero-groups exceed 70% again and e51 is below 70.9, I test temperature 1.1 from the best checkpoint. I keep the last 3 evals for low-rate holds.
+
+**Grade of its previous prediction.** Right on every figure. Val 70.9 fell inside the predicted 66-73.5 and trail-3 69.9 inside 68.3-70.8, a new best above the 66.6 line I gave a 65% chance. Paired SE 1.6 sat at the bottom edge of 1.6-2.8. The collapse signature (10% chance) did not appear. In range: reward 0.737, pass 71.5%, partial 5.2%, no-submit 22.9%, wrong 5.6%, zero-groups 71.0% and easy pass 90.8% near their top edges, truncation 4.2%, tokens 1670, tools 9.28, hard pass 52.2%, rested hard tasks 54, u2 clip 0.0003, grad norm 0.05, load errors 0.0%.
+
+### Decision 51
+
+**REVERT to e50** after eval e51 (40,800 rollouts used, validation pass rate 69.8%). Settings changed: temperature 1 to 1.1.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.1.
+
+**Reason.** e51 at 69.8 (-1.0+-1.6) met my continue line and set the best trail-3 (70.5), but val has been flat for two evals while zero-groups reached 77% after 71%, grad norm halved to 0.027 and u2 clip fell to 0.00016. My second rule fires: test temperature 1.1. I start from e50, not e51: the e51 segment barely moved the policy, e50's window (70.9, 70.9) needs only 70.1, and replaying the same prompts makes e51 the temperature-1.0 control arm. e51 stays available. All other knobs and the optimizer state are unchanged.
+
+**Prediction.** e52 (on the e50 path) val lands at 66.5-73%, putting trail-3 at 69.4-71.6; 70.1 or higher sets a new best, about a 45% chance. Paired SE against e50 is 1.6-2.8. Training replays e51's prompts (reward 0.693, zero-groups 77% at temperature 1.0): reward 0.60-0.72, pass 57-70%, partial 5-11%, no-submit 18-32%, wrong 8-20%, zero-groups 60-76%, truncation 2.5-9%, tokens 1600-1950, tools 8.5-11. By pool: easy pass 78-90% of 400, hard pass 38-52% of 400; rested hard tasks 50-70. u2 clip ratio under 0.0015, grad norm 0.025-0.07, load errors under 1.5%.
+
+**Would change its mind if.** If e52 is 70.1 or higher, I continue at temperature 1.1. If e52 lands at 68-70 with zero-groups under 72% and no trigger, I run one more segment at 1.1. If e52 falls below 68, or zero-groups stay at 75% or more with e52 under 70.1, or no-submit exceeds 35%, or truncation exceeds 13%, or the signature appears (no-submit under 15% with wrong above 30%), temperature 1.1 does not help: I revert to e51 and resume 3e-05 at temperature 1.0, then consider 5e-05 if two more evals stay flat. I keep the last 3 evals for low-rate holds.
+
+**Grade of its previous prediction.** Mostly right. Val 69.8 fell inside the predicted 66.5-73.5 and trail-3 70.5 inside 69.4-71.8, a new best above the 68.3 line I gave a 70% chance. Paired SE 1.6 fell inside 1.5-2.8. The collapse signature (10% chance) did not appear. In range: reward 0.693, pass 67.1%, partial 7.5%, no-submit 20.8%, wrong 12.1% near its top edge, truncation 2.9%, tokens 1640, tools 9.52, easy pass 86.2%, hard pass 48.0%, rested hard tasks 61, rested easy tasks 40, u2 clip 0.0002, grad norm 0.03, load errors 0.0%. One miss: zero-groups 77.0% (58-76%).
+
+### Decision 52
+
+**REVERT to e51** after eval e52 (41,600 rollouts used, validation pass rate 63.8%). Settings changed: temperature 1.1 to 1.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e52 at 63.8 fell 7.0+-2.5 from e50, below my 68 revert line. Training looked normal (reward 0.664, no-submit 23.0%, wrong 12.8%) and zero-groups dropped from 77% to 69% on the same prompts, so temperature 1.1 bought signal but cost greedy val. I drop it. As planned I revert to e51, the temperature-1.0 arm: 69.8, best trail-3 of the run (70.5), -1.0+-1.6 from e50. I pick e51 over e50 for fresh prompts and its extra segment of training, accepting a harder window (needs 71.1). Config returns to n12's: 3e-05, temperature 1.0, optimizer state kept.
+
+**Prediction.** e53 (on the e51 path) val lands at 66.5-73%, putting trail-3 at 69.1-71.2; 71.1 or higher sets a new best, about a 30% chance. Paired SE against e51 is 1.5-2.6. I give the collapse signature a 10% chance. Otherwise training: reward 0.62-0.77, pass 60-75%, partial 4-9%, no-submit 16-30%, wrong 5-14%, zero-groups 62-80%, truncation 2-8%, tokens 1500-1850, tools 8-11. By pool: easy pass 82-92% of 400, hard pass 40-56% of 400; rested hard tasks 50-75, rested easy tasks 32-50. u2 clip ratio under 0.001, grad norm 0.02-0.06, load errors under 1.5%.
+
+**Would change its mind if.** If e53 is 71.1 or higher, I continue at 3e-05. If e53 lands at 68-71 without triggers, I continue one more segment; if e54 also sets no new best trail-3, 3e-05 has plateaued and I test 5e-05 from the best checkpoint. If e53 falls below 68, or the signature appears (no-submit under 15% with wrong above 25%), or no-submit exceeds 35%, or truncation exceeds 13%, I revert to e50 at 1e-05, whose window (70.9, 70.9) needs only 70.1. I do not retry temperature above 1.0. I keep the last 3 evals for low-rate holds.
+
+**Grade of its previous prediction.** Val missed badly, training right. Val 63.8 fell below the predicted 66.5-73 and trail-3 68.5 below 69.4-71.6; I gave a new best a 45% chance. Paired SE 2.5 fell inside 1.6-2.8. Every training figure was in range: reward 0.664, pass 64.2%, partial 7.6%, no-submit 23.0%, wrong 12.8%, zero-groups 69.0%, truncation 4.0%, tokens 1640, tools 9.36, easy pass 83.2%, hard pass 45.2%, rested hard tasks 57, u2 clip 0.0003, grad norm 0.04, load errors 0.0%. Temperature 1.1 cut zero-groups as hoped, but I did not foresee that it would lower greedy val.
+
+### Decision 53
+
+**CONTINUE** after eval e53 (42,400 rollouts used, validation pass rate 69.8%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e53 at 69.8 matched e51 (+0.0+-1.2); trail-3 is 70.2, under the best 70.5 at e51. It sits in my 68-71 band with no trigger: no-submit 17.4%, wrong 9.8%, truncation 3.8%. Training tied its best (reward 0.737, hard pass 53.5%, easy pass 91.2%). My rule says one more segment at 3e-05 before calling a plateau. Signal is thin (zero-groups 75%, u2 grad norm 0.019, clip 0.0002), so I expect to raise the rate next, but 22 evals remain and one confirming segment is cheap. I change nothing.
+
+**Prediction.** e54 val lands at 66.5-73%, putting trail-3 at 68.7-70.9; 72.1 or higher sets a new best, about a 15% chance. Paired SE against e53 is 1.2-2.4. I give the collapse signature a 10% chance. Otherwise training: reward 0.63-0.77, pass 61-75%, partial 3.5-9%, no-submit 13-28%, wrong 5-14%, zero-groups 64-80%, truncation 2-8%, tokens 1500-1850, tools 8.5-11. By pool: easy pass 83-93% of 400, hard pass 42-58% of 400; rested hard tasks 50-75, rested easy tasks 32-50. u2 clip ratio under 0.001, grad norm 0.015-0.06, load errors under 1.5%.
+
+**Would change its mind if.** If e54 is 72.1 or higher, I continue at 3e-05. If e54 lands at 68-72 with no trigger, 3e-05 has plateaued: I start 5e-05 from e54 with the optimizer kept. If e54 falls below 68 with normal training, I start 5e-05 from e53 instead. If the signature appears (no-submit under 15% with wrong above 25%), or no-submit exceeds 35%, or truncation exceeds 13%, I revert to e53 at 1e-05. I do not retry temperature above 1.0. I keep the last 3 evals for low-rate holds.
+
+**Grade of its previous prediction.** Mostly right. Val 69.8 fell inside the predicted 66.5-73 and trail-3 70.2 inside 69.1-71.2; no new best, in line with the 30% chance I gave. The collapse signature (10% chance) did not appear. In range: reward 0.737, pass 72.4%, partial 4.8%, no-submit 17.4%, wrong 9.8%, zero-groups 75.0%, truncation 3.8%, tokens 1690, tools 9.73, easy pass 91.2%, hard pass 53.5%, rested hard tasks 61, rested easy tasks 41, u2 clip 0.0002, load errors 0.5%. Misses: paired SE 1.2 (1.5-2.6), u2 grad norm 0.019 (0.02-0.06).
+
+### Decision 54
+
+**NEW_PHASE** after eval e54 (43,200 rollouts used, validation pass rate 71.4%). Settings changed: learning rate 3e-05 to 5e-05.
+
+Settings from here: learning rate 5e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e54 at 71.4 is the best single eval (+1.5+-1.8 over e53, +48.2+-3.8 over base), but trail-3 70.4 stays under e51's 70.5; the last four trail-3 values sit within 69.9-70.5. It lands in my 68-72 band with no trigger (no-submit 18.8%, wrong 8.1%, truncation 2.2%), so my rule fires: 3e-05 has plateaued on val. Training is healthy (reward 0.749, hard pass 62.3%), a sound base for a larger step. I start 5e-05 from e54, optimizer kept, all else unchanged. A failed trial costs one of 21 evals; e54 stays available.
+
+**Prediction.** e55 val lands at 66.5-73.5%, putting trail-3 at 69.2-71.6; 70.6 or higher sets a new best, about a 40% chance. Paired SE against e54 is 1.4-2.6. I give the collapse signature a 20% chance. Otherwise training: reward 0.62-0.78, pass 60-76%, partial 3.5-9%, no-submit 12-27%, wrong 5-15%, zero-groups 62-80%, truncation 2-8%, tokens 1500-1850, tools 8.5-11. By pool: easy pass 82-93% of 400, hard pass 42-62% of 400; rested hard tasks 48-72, rested easy tasks 35-55. u2 clip ratio under 0.001, grad norm 0.015-0.06, load errors under 1.5%.
+
+**Would change its mind if.** If e55 is 70.6 or higher, I continue at 5e-05. If e55 lands at 68-70.5 with no trigger, I run one more segment at 5e-05. If e55 falls below 68, or the signature appears (no-submit under 15% with wrong above 25%), or no-submit exceeds 35%, or truncation exceeds 13%, 5e-05 is too large here: I revert to e54 at 3e-05, whose window (69.8, 71.4) needs 70.6, and stay there. I do not go above 5e-05 and do not retry temperature above 1.0. I keep the last 3 evals for low-rate holds.
+
+**Grade of its previous prediction.** Right on nearly every figure. Val 71.4 fell inside the predicted 66.5-73 and trail-3 70.4 inside 68.7-70.9; no new best, in line with the 15% chance I gave for 72.1. Paired SE 1.8 fell inside 1.2-2.4. The collapse signature (10% chance) did not appear. In range: reward 0.749, pass 73.0%, partial 5.4%, no-submit 18.8%, wrong 8.1%, zero-groups 70.0%, truncation 2.2% and easy pass 83.8% at their bottom edges, tokens 1630, tools 9.84, rested hard tasks 55, rested easy tasks 45, u2 clip 0.0003, grad norm 0.03, load errors 0.1%. One miss, favourable: hard pass 62.3% (42-58%).
+
+### Decision 55
+
+**REVERT to e54** after eval e55 (44,000 rollouts used, validation pass rate 67.1%). Settings changed: learning rate 5e-05 to 3e-05.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e55 at 67.1 fell 4.3+-2.7 from e54, below my 68 revert line; trail-3 dropped to 69.4. Training drifted the wrong way at 5e-05: no-submit 29.2% (from 18.8%), truncation 8.0% (from 2.2%), tokens 1850, reward 0.672. There is no collapse signature, but the larger step bought nothing. As planned I revert to e54, the best single eval, at 3e-05 with the optimizer kept. Its window (69.8, 71.4) needs only 70.6 for a new best trail-3; continuing from e55 would need two strong evals. All other knobs are unchanged.
+
+**Prediction.** e56 (on the e54 path) val lands at 67-73.5%, putting trail-3 at 69.4-71.6; 70.6 or higher sets a new best, about a 40% chance. Paired SE against e54 is 1.4-2.6. I give the collapse signature a 10% chance. Training replays e55's prompts (reward 0.672, zero-groups 56% at 5e-05): reward 0.63-0.75, pass 61-73%, partial 4-9%, no-submit 16-30%, wrong 5-13%, zero-groups 54-72%, truncation 2.5-9%, tokens 1580-1900, tools 8.8-10.8. By pool: easy pass 82-92%, hard pass 42-58%; rested hard tasks 50-66, rested easy tasks 44-56. u2 clip ratio under 0.001, grad norm 0.015-0.05, load errors under 1.5%.
+
+**Would change its mind if.** If e56 is 70.6 or higher, I continue at 3e-05. If e56 lands at 68-70.5 with no trigger, I run one more segment at 3e-05. If e56 falls below 68, both branches from e54 dropped on this prompt stretch: I revert to e54 at 1e-05, the fix that worked at e43, still needing 70.6. The same revert applies if the signature appears (no-submit under 15% with wrong above 25%), no-submit exceeds 35%, or truncation exceeds 13%. I do not go above 3e-05 again and do not retry temperature above 1.0. I keep the last 3 evals for low-rate holds.
+
+**Grade of its previous prediction.** Val in range but at the bottom, and below my 68 line. Val 67.1 fell inside the predicted 66.5-73.5 and trail-3 69.4 inside 69.2-71.6; no new best, against the 40% chance I gave. Paired SE 2.7 missed 1.4-2.6. The collapse signature (20% chance) did not appear. Misses: no-submit 29.2% (12-27%), zero-groups 56.0% (62-80%). In range: reward 0.672, pass 65.4%, partial 4.8%, wrong 5.4%, truncation 8.0% and tokens 1850 at their top edges, tools 9.4, easy pass 85.0%, hard pass 45.8%, rested hard tasks 57, rested easy tasks 50, u2 clip 0.0003, grad norm 0.03, load errors 0.0%.
+
+### Decision 56
+
+**CONTINUE** after eval e56 (44,800 rollouts used, validation pass rate 71.6%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e56 at 71.6 is the best single eval (+0.2+-1.2 over e54, +48.5+-3.9 over base) and sets the best trail-3 of the run (70.9), meeting my continue line (70.6). On the same prompts where 5e-05 fell to 67.1, 3e-05 held, so the step size caused that drop. Training was weaker on this stretch at both rates (reward 0.662, hard pass 45.2%, no-submit 30.6%), which points to a harder prompt draw; no trigger fired (truncation 4.6%, wrong 5.0%, u2 clip 0.0003). 3e-05 is the only rate that has kept gaining here, so I change nothing.
+
+**Prediction.** e57 val lands at 67.5-74%, putting trail-3 at 70.2-72.3; 70.1 or higher sets a new best, about a 55% chance. Paired SE against e56 is 1.2-2.4. I give the collapse signature a 10% chance. Otherwise training: reward 0.62-0.77, pass 60-75%, partial 3.5-9%, no-submit 16-32%, wrong 4-13%, zero-groups 62-80%, truncation 2-9%, tokens 1550-1900, tools 8.8-10.8. By pool: easy pass 82-92%, hard pass 42-60%; rested hard tasks 52-72, rested easy tasks 45-60. u2 clip ratio under 0.001, grad norm 0.015-0.05, load errors under 1.5%.
+
+**Would change its mind if.** If e57 is 70.1 or higher, I continue at 3e-05. If e57 lands at 68-70 with no trigger, I run one more segment at 3e-05. If e57 falls below 68, or the signature appears (no-submit under 15% with wrong above 25%), or no-submit exceeds 35%, or truncation exceeds 13%, I revert to e56 at 1e-05, whose window (71.4, 71.6) needs only 70.1. I do not go above 3e-05 again and do not retry temperature above 1.0. I keep the last 3 evals for low-rate holds from the best checkpoint.
+
+**Grade of its previous prediction.** Mostly right. Val 71.6 fell inside the predicted 67-73.5 and trail-3 70.9 inside 69.4-71.6, a new best above the 70.6 line I gave a 40% chance. The collapse signature (10% chance) did not appear. Misses: paired SE 1.2 (1.4-2.6), no-submit 30.6% (16-30%). In range: reward 0.662, pass 64.4%, partial 5.0%, wrong 5.0% at its bottom edge, zero-groups 68.0%, truncation 4.6%, tokens 1790, tools 9.63, easy pass 83.5%, hard pass 45.2%, rested hard tasks 62, rested easy tasks 52, u2 clip 0.0003, grad norm 0.03, load errors 0.0%.
+
+### Decision 57
+
+**CONTINUE** after eval e57 (45,600 rollouts used, validation pass rate 71.4%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e57 at 71.4 (-0.2+-2.1 from e56, +48.2+-4.1 over base) sets the best trail-3 of the run (71.4), meeting my continue line (70.1). Training was the strongest yet: reward 0.772, easy pass 92.2%, hard pass 59.8%, truncation 0.2%, no trigger (no-submit 17.9%, wrong 6.1%). Signal is thin (zero-groups 85%, grad norm 0.021, u2 clip 0.0001), but the two ways to add signal both cost val: temperature 1.1 (-7.0) and 5e-05 (-4.3). hard_share and num_generations are already at their maximum. 3e-05 is stable and still edging up, so I change nothing.
+
+**Prediction.** e58 val lands at 67.5-74%, putting trail-3 at 70.2-72.3; 71.6 or higher sets a new best, about a 40% chance. Paired SE against e57 is 1.2-2.4. I give the collapse signature a 10% chance. Otherwise training: reward 0.64-0.79, pass 62-78%, partial 3.5-9%, no-submit 14-30%, wrong 4-12%, zero-groups 66-86%, truncation 0.2-7%, tokens 1500-1850, tools 9-10.8. By pool: easy pass 84-94%, hard pass 44-62%; rested hard tasks 55-80, rested easy tasks 55-80. u2 clip ratio under 0.001, grad norm 0.012-0.045, load errors under 1.5%.
+
+**Would change its mind if.** If e58 is 71.6 or higher, I continue at 3e-05. If e58 lands at 68-71.5 with no trigger, I run one more segment at 3e-05. If e58 falls below 68, or the signature appears (no-submit under 15% with wrong above 25%), or no-submit exceeds 35%, or truncation exceeds 13%, I revert to e57 at 1e-05, whose window (71.6, 71.4) needs 71.6. I do not go above 3e-05 again and do not retry temperature above 1.0. I keep the last 3 evals for low-rate holds from the best checkpoint.
+
+**Grade of its previous prediction.** Val right, training better than predicted. Val 71.4 fell inside 67.5-74 and trail-3 71.4 inside 70.2-72.3, a new best above the 70.1 line I gave a 55% chance. Paired SE 2.1 fell inside 1.2-2.4. The collapse signature (10% chance) did not appear. Misses: reward 0.772 (0.62-0.77), pass 76.0% (60-75%), zero-groups 85.0% (62-80%), truncation 0.2% (2-9%), easy pass 92.2% (82-92%), rested easy tasks 68 (45-60). In range: partial 5.8%, no-submit 17.9%, wrong 6.1%, tokens 1580, tools 9.89, hard pass 59.8%, rested hard tasks 67, u2 clip 0.0001, grad norm 0.02, load errors 0.0%.
+
+### Decision 58
+
+**NEW_PHASE** after eval e58 (46,400 rollouts used, validation pass rate 71.4%). Settings changed: hard-task share 0.5 to 0.75.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.75, temperature 1.
+
+**Reason.** e58 at 71.4 (+0.0+-1.5) ties e57's trail-3 (71.4); four evals on this path sit at 284-285 of 398 passes. No trigger fired (no-submit 22.0%, wrong 7.0%, truncation 4.1%), but signal is thin: zero-groups 81%, u2 grad norm 0.015, easy pass 92% with 88 easy tasks rested. Correction: last time I wrote that hard_share was at its maximum; it is 0.5 of a possible 1.0. Easy prompts now carry little gradient, so I raise hard_share to 0.75. Earlier raises (e10, e18) did not hurt val. Rate, temperature and optimizer state are unchanged.
+
+**Prediction.** e59 val lands at 67.5-74%, putting trail-3 at 70.1-72.3; 71.9 or higher (286 passes) sets a new best, about a 30% chance. Paired SE against e58 is 1.4-2.6. I give the collapse signature a 10% chance. Otherwise training, now 600 hard and 200 easy rollouts: reward 0.57-0.70, pass 55-68%, partial 5-10%, no-submit 22-38%, wrong 6-14%, zero-groups 66-82%, truncation 3-9%, tokens 1650-2000, tools 9.3-11. By pool: easy pass 84-95%, hard pass 42-60%; rested hard tasks 75-105, rested easy tasks 75-100. u2 clip ratio under 0.001, grad norm 0.015-0.05, load errors under 1.5%.
+
+**Would change its mind if.** If e59 is 71.9 or higher, I continue at hard_share 0.75. If e59 lands at 69.5-71.6 with no trigger, I run one more segment at 0.75. If e59 falls below 69.5, or the signature appears (no-submit under 15% with wrong above 25%), or no-submit exceeds 40%, or truncation exceeds 13%, I revert to e58 at hard_share 0.5 and 3e-05. I try hard_share 1.0 only if 0.75 sets a new best. I do not go above 3e-05 and do not retry temperature above 1.0. I keep the last 3 evals for low-rate holds from the best checkpoint.
+
+**Grade of its previous prediction.** Right on nearly every figure. Val 71.4 fell inside the predicted 67.5-74 and trail-3 71.4 inside 70.2-72.3; no new best (it ties e57), in line with the 40% chance I gave for 71.6. Paired SE 1.5 fell inside 1.2-2.4. The collapse signature (10% chance) did not appear. In range: reward 0.735, pass 71.0%, partial 6.9%, no-submit 22.0%, wrong 7.0%, zero-groups 81.0%, truncation 4.1%, tokens 1690, tools 9.9, easy pass 92.0%, hard pass 50.0%, rested hard tasks 73, u2 clip 0.0001, grad norm 0.015-0.03, load errors 0.0%. One miss: rested easy tasks 88 (55-80).
+
+### Decision 59
+
+**CONTINUE** after eval e59 (47,200 rollouts used, validation pass rate 70.1%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.75, temperature 1.
+
+**Reason.** e59 at 70.1 fell 1.3+-1.2 from e58, about one paired SE and inside my 69.5-71.6 band; trail-3 is 70.9 against the best 71.4 at e57. No trigger fired: no-submit 33.6% (the rise roughly matches the new pool mix), wrong 5.5%, truncation 2.2%. Hard pass held at 50.3% on 600 rollouts and zero-groups eased to 77%. One segment cannot separate hard_share 0.75 from noise, and hard_share 0.5 was flat for four evals, so the trial gets its second segment as my rule says. e58 stays available. I change nothing.
+
+**Prediction.** e60 val lands at 67.5-73.5%, putting trail-3 at 69.7-71.7; 73.1 or higher (291 passes) sets a new best, about an 8% chance. Paired SE against e59 is 1.2-2.4. I give the collapse signature a 10% chance. Otherwise training: reward 0.57-0.70, pass 55-68%, partial 3.5-9%, no-submit 24-40%, wrong 4-12%, zero-groups 68-84%, truncation 1.5-8%, tokens 1700-2050, tools 9.3-10.8. By pool: easy pass 86-96% of 200, hard pass 42-58% of 600; rested hard tasks 100-135, rested easy tasks 78-98. u2 clip ratio under 0.001, grad norm 0.012-0.04, load errors under 1.5%.
+
+**Would change its mind if.** If e60 is 71.4 or higher (284 passes) with no trigger, I continue at hard_share 0.75. If e60 falls below 71.4, both segments at 0.75 sat under the 0.5 plateau: I revert to e58 at hard_share 0.5 and 3e-05, whose window (71.4, 71.4) needs 71.9. The same revert applies if the signature appears (no-submit under 15% with wrong above 25%), no-submit exceeds 40%, or truncation exceeds 13%. I try hard_share 1.0 only if 0.75 sets a new best. I do not go above 3e-05 or retry temperature above 1.0. I keep the last 3 evals for low-rate holds.
+
+**Grade of its previous prediction.** Val right, a few training figures low. Val 70.1 fell inside the predicted 67.5-74 and trail-3 70.9 inside 70.1-72.3; no new best, in line with the 30% chance I gave for 71.9. The collapse signature (10% chance) did not appear. Misses: paired SE 1.2 (1.4-2.6), partial 4.2% (5-10%), wrong 5.5% (6-14%), truncation 2.2% (3-9%). In range: reward 0.623, pass 60.9%, no-submit 33.6%, zero-groups 77.0%, tokens 1900, tools 9.91, easy pass 92.5%, hard pass 50.3%, rested hard tasks 96, rested easy tasks 89, u2 clip 0.0002, grad norm 0.02, load errors 0.0%.
+
+### Decision 60
+
+**REVERT to e58** after eval e60 (48,000 rollouts used, validation pass rate 69.8%). Settings changed: hard-task share 0.75 to 0.5.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e60 at 69.8 (-0.2+-1.7 from e59, 1.6 under e58) fell below my 71.4 line: both segments at hard_share 0.75 sat under the 0.5 plateau, and trail-3 slid to 70.4 against the best 71.4 at e57. No trigger fired (no-submit 31.2%, wrong 10.1%, truncation 5.0%), but hard pass stayed at 50.0% and easy pass slipped to 84.5%, so the extra hard prompts bought nothing. As planned I revert to e58 with n16's config: hard_share 0.5, 3e-05, optimizer kept. Its window (71.4, 71.4) needs 286 passes; staying on n17 would need three evals averaging 71.5.
+
+**Prediction.** e61 (on the e58 path) val lands at 68.5-73.5%, putting trail-3 at 70.4-72.1; 71.9 or higher (286 passes) sets a new best, about a 25% chance. Paired SE against e58 is 1.2-2.4. I give the collapse signature a 10% chance. Otherwise training, 400 easy and 400 hard rollouts: reward 0.64-0.79, pass 62-77%, partial 4-9%, no-submit 15-30%, wrong 4-12%, zero-groups 70-87%, truncation 0.5-7%, tokens 1500-1850, tools 9.3-10.5. By pool: easy pass 85-95%, hard pass 44-62%; rested hard tasks 76-95, rested easy tasks 90-118. u2 clip ratio under 0.001, grad norm 0.012-0.04, load errors under 1.5%.
+
+**Would change its mind if.** If e61 is 71.9 or higher, I continue at this config. If e61 lands at 70.1-71.6 with no trigger, I continue one more segment. If e61 falls below 70.1, or the signature appears (no-submit under 15% with wrong above 25%), or no-submit exceeds 35%, or truncation exceeds 13%, I revert to e58 at 1e-05. If e62 also sets no new best, I test rollouts_per_update 32 from the best checkpoint. I do not retry hard_share above 0.5, rates above 3e-05 or temperature above 1.0. I keep the last 3 evals for low-rate holds.
+
+**Grade of its previous prediction.** Mostly right. Val 69.8 fell inside the predicted 67.5-73.5 and trail-3 70.4 inside 69.7-71.7; no new best, in line with the 8% chance I gave for 73.1. Paired SE 1.7 fell inside 1.2-2.4. The collapse signature (10% chance) did not appear. In range: reward 0.606, pass 58.6%, partial 9.0% at its top edge, no-submit 31.2%, wrong 10.1%, zero-groups 74.0%, truncation 5.0%, tokens 1830, tools 9.75, hard pass 50.0%, rested easy tasks 80, u2 clip 0.0002, grad norm 0.02, load errors 0.0%. Misses: easy pass 84.5% (86-96%), rested hard tasks 99 (100-135).
+
+### Decision 61
+
+**REVERT to e57** after eval e61 (48,800 rollouts used, validation pass rate 68.3%). Settings changed: learning rate 3e-05 to 1e-05.
+
+Settings from here: learning rate 1e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e61 at 68.3 fell 3.0+-1.5 from e58, below my 70.1 line; trail-3 is 70.4 against the best 71.4. No trigger fired (no-submit 26.2%, wrong 5.6%, truncation 2.9%), so this is drift under thin signal (zero-groups 81%), not collapse. My rule fires: revert at 1e-05. I start from e57 instead of e58: e57 holds the pick, its window (285, 284 passes) needs 285 for a new best against 286 from e58, and both of e58's children fell. Continuing from e61 would need three evals averaging over 71.4.
+
+**Prediction.** e62 (on the e57 path) val lands at 68.5-73.5%, putting trail-3 at 70.5-72.2; 71.6 or higher (285 passes) sets a new best, about a 35% chance. Paired SE against e57 is 1.2-2.2. I give the collapse signature a 5% chance. Training replays e58's prompts (reward 0.735, zero-groups 81%): reward 0.66-0.79, pass 64-77%, partial 4-9%, no-submit 15-29%, wrong 4-12%, zero-groups 72-87%, truncation 1-7%, tokens 1520-1850, tools 9.4-10.4. By pool: easy pass 86-95%, hard pass 44-60%; rested hard tasks 62-85, rested easy tasks 75-100. u2 clip ratio under 0.001, grad norm 0.012-0.04, load errors under 1.5%.
+
+**Would change its mind if.** If e62 is 71.6 or higher (285 passes), I continue at 1e-05. If it falls below with no trigger, continuing would need more than a fresh draw does, so I revert to e57 again and test rollouts_per_update 32 at 3e-05, still needing 285. The same revert applies if the signature appears (no-submit under 15% with wrong above 25%), no-submit exceeds 35%, or truncation exceeds 13%. I do not retry hard_share above 0.5, rates above 3e-05 or temperature above 1.0. I keep the last 3 evals for low-rate holds from the best checkpoint.
+
+**Grade of its previous prediction.** Val just missed, training right. Val 68.3 fell below the predicted 68.5-73.5; trail-3 70.4 sat at the bottom edge of 70.4-72.1; no new best, in line with the 25% chance I gave for 71.9. Paired SE 1.5 fell inside 1.2-2.4. The collapse signature (10% chance) did not appear. Every training figure was in range: reward 0.694, pass 68.0%, partial 4.8%, no-submit 26.2%, wrong 5.6%, zero-groups 81.0%, truncation 2.9%, tokens 1780, tools 9.91, easy pass 90.8%, hard pass 45.2% near its bottom edge, rested hard tasks 84, rested easy tasks 99, u2 clip 0.0002, grad norm 0.013-0.028, load errors 0.1%.
+
+### Decision 62
+
+**REVERT to e57** after eval e62 (49,600 rollouts used, validation pass rate 70.9%). Settings changed: learning rate 1e-05 to 3e-05, rollouts per update 16 to 32.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 32, hard-task share 0.5, temperature 1.
+
+**Reason.** e62 at 70.9 (282 passes) sits -0.5+-1.0 from e57, under my 285 line; trail-3 is 71.3 against the best 71.4 at e57. No trigger fired (no-submit 21.2%, wrong 7.6%, truncation 4.0%). 1e-05 held the level but added nothing: training matched e58 on the same prompts (reward 0.738 against 0.735). Continuing needs 288 at e63; a fresh start from e57 needs 285. As planned I revert to e57 and test rollouts_per_update 32 at 3e-05: with zero-groups near 80%, one update over all four prompts averages a thin signal. Other knobs unchanged, optimizer kept.
+
+**Prediction.** e63 (on the e57 path) val lands at 68.5-73.5%, putting trail-3 at 70.5-72.2; 71.6 or higher (285 passes) sets a new best, about a 35% chance. Paired SE against e57 is 1.0-2.2. I give the collapse signature a 5% chance. Training replays e58's prompts: reward 0.66-0.79, pass 64-77%, partial 4-9%, no-submit 15-29%, wrong 4-12%, zero-groups 72-87%, truncation 1-7%, tokens 1520-1850, tools 9.4-10.4. By pool: easy pass 86-95%, hard pass 44-60%; rested hard tasks 62-85, rested easy tasks 75-100. One update per generation: grad norm 0.008-0.035, clip ratio under 0.001, load errors under 1.5%.
+
+**Would change its mind if.** If e63 is 71.6 or higher (285 passes), I continue at rollouts_per_update 32. If it falls below with no trigger, three arms from e57 will have landed at or under 284: I return to e57 for another draw at the arm that scored highest (1e-05 with 16, 3e-05 with 16 or 3e-05 with 32), since a fresh draw needs 285 and continuing needs more. If the signature appears (no-submit under 15% with wrong above 25%), no-submit exceeds 35%, or truncation exceeds 13%, I revert to e57 at 1e-05. I do not retry hard_share above 0.5, rates above 3e-05 or temperature above 1.0.
+
+**Grade of its previous prediction.** Right on nearly every figure. Val 70.9 fell inside the predicted 68.5-73.5 and trail-3 71.3 inside 70.5-72.2; no new best, in line with the 35% chance I gave for 71.6. The collapse signature (5% chance) did not appear. One miss: paired SE 1.0 (1.2-2.2). In range: reward 0.738, pass 71.1%, partial 7.4%, no-submit 21.2%, wrong 7.6%, zero-groups 77.0%, truncation 4.0%, tokens 1700, tools 9.88, easy pass 93.5%, hard pass 48.8%, rested hard tasks 71, rested easy tasks 88, u2 clip 0.0002, grad norm 0.02, load errors 0.0%.
+
+### Decision 63
+
+**REVERT to e57** after eval e63 (50,400 rollouts used, validation pass rate 70.6%). Settings changed: rollouts per update 32 to 16.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e63 at 70.6 (281 passes) sits -0.8+-1.9 from e57, under my 285 line; trail-3 is 71.2 against the best 71.4 at e57. No trigger fired (no-submit 20.2%, wrong 8.8%, truncation 4.6%). The three arms from e57 scored 284, 282 and 281, within about one paired SE of each other, so they are not separable. Window arithmetic decides: continuing n20 needs 289 at e64, a fresh draw from e57 needs 285. As planned I revert to e57 at the arm that scored highest, n16's config (3e-05, rollouts_per_update 16), optimizer kept.
+
+**Prediction.** e64 (on the e57 path) val lands at 68-73.5%, putting trail-3 at 70.4-72.1; 71.6 or higher (285 passes) sets a new best, about a 30% chance. Paired SE against e57 is 1.2-2.2. I give the collapse signature a 5% chance. Training replays e58's prompts: reward 0.66-0.79, pass 64-77%, partial 4-9%, no-submit 15-29%, wrong 4-12%, zero-groups 72-87%, truncation 1-7%, tokens 1520-1850, tools 9.4-10.4. By pool: easy pass 86-95%, hard pass 44-60%; rested hard tasks 62-85, rested easy tasks 75-100. u2 clip ratio under 0.001, grad norm 0.012-0.04, load errors under 1.5%.
+
+**Would change its mind if.** If e64 is 71.6 or higher (285 passes), I continue from it at this config; its next window then needs 286. If it falls below with no trigger, I revert to e57 again at this same config: a fresh draw needs 285 and continuing needs more. Single evals differ by about one paired SE, so I stop ranking arms on one segment each. If the signature appears (no-submit under 15% with wrong above 25%), no-submit exceeds 35%, or truncation exceeds 13%, I revert to e57 at 1e-05. I do not retry hard_share above 0.5, rates above 3e-05 or temperature above 1.0.
+
+**Grade of its previous prediction.** Right on every figure. Val 70.6 fell inside the predicted 68.5-73.5 and trail-3 71.2 inside 70.5-72.2; no new best, in line with the 35% chance I gave for 71.6. Paired SE 1.9 fell inside 1.0-2.2. The collapse signature (5% chance) did not appear. In range: reward 0.741, pass 71.0%, partial 8.8% near its top edge, no-submit 20.2%, wrong 8.8%, zero-groups 81.0%, truncation 4.6%, tokens 1690, tools 9.85, easy pass 92.0%, hard pass 50.0%, rested hard tasks 72, rested easy tasks 88, grad norm 0.019, clip ratio 0.0001, load errors 0.0%.
+
+### Decision 64
+
+**CONTINUE** after eval e64 (51,200 rollouts used, validation pass rate 74.1%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e64 at 74.1 (295 passes) is the best single eval of the run (+2.8+-2.2 over e57, +51.0+-3.8 over base) and sets the best trail-3 (72.4), meeting my continue line (285). No trigger fired (no-submit 22.1%, wrong 8.4%, truncation 3.9%); training matched the earlier draws on these prompts (reward 0.723). Part of the jump is probably draw luck: the same config from e57 gave 284 before. Still, continuing puts 295 into the next two windows and needs only 286 at e65; no other start point can beat 72.4 in one eval. I change nothing.
+
+**Prediction.** e65 val lands at 69.5-75%, putting trail-3 at 71.7-73.5; 71.9 or higher (286 passes) sets a new best, about a 50% chance, since I expect some fall-back from 295. Paired SE against e64 is 1.2-2.4. I give the collapse signature a 5% chance. Otherwise training: reward 0.63-0.76, pass 62-75%, partial 3.5-9%, no-submit 18-33%, wrong 4-11%, zero-groups 72-88%, truncation 1-7%, tokens 1600-1900, tools 9.4-10.4. By pool: easy pass 86-95%, hard pass 40-56%; rested hard tasks 72-95, rested easy tasks 88-110. u2 clip ratio under 0.001, grad norm 0.012-0.04, load errors under 1.5%.
+
+**Would change its mind if.** If e65 is 286 passes (71.9) or higher, I continue. If e65 is 284-285 with no trigger, I also continue: the next window then needs no more than a fresh draw would. If e65 falls below 284, I revert to e64 at this same config, whose window (284, 295) needs 286. If the signature appears (no-submit under 15% with wrong above 25%), no-submit exceeds 35%, or truncation exceeds 13%, I revert to e64 at 1e-05. I do not retry hard_share above 0.5, rates above 3e-05 or temperature above 1.0.
+
+**Grade of its previous prediction.** Val beat the range, training right. Val 74.1 landed above the predicted 68-73.5 and trail-3 72.4 above 70.4-72.1, a new best that I gave a 30% chance. Paired SE 2.2 sat at the top edge of 1.2-2.2. The collapse signature (5% chance) did not appear. Every training figure was in range: reward 0.723, pass 69.5%, partial 8.2%, no-submit 22.1%, wrong 8.4%, zero-groups 76.0%, truncation 3.9%, tokens 1690, tools 9.88, easy pass 92.0%, hard pass 47.0%, rested hard tasks 69, rested easy tasks 87, u2 clip 0.0002, grad norm 0.016-0.035, load errors 0.0%.
+
+### Decision 65
+
+**REVERT to e64** after eval e65 (52,000 rollouts used, validation pass rate 70.1%). Settings changed: none.
+
+Settings from here: learning rate 3e-05, group size 8, rollouts per update 16, hard-task share 0.5, temperature 1.
+
+**Reason.** e65 at 70.1 (279 passes) fell 4.0+-2.0 from e64, below my 284 line; trail-3 is 71.9 against the best 72.4 at e64. No trigger fired (no-submit 27.1%, wrong 4.5%, truncation 5.4%), so this reads as fall-back from a lucky 295 toward the 282-pass plateau, not collapse. Window arithmetic decides: continuing needs 291 at e66, a fresh draw from e64 (window 284, 295) needs 286. As planned I revert to e64 at the same config, optimizer kept. No other knob has shown a gain: 5e-05, temperature 1.1 and hard_share 0.75 all scored lower.
+
+**Prediction.** e66 (on the e64 path) val lands at 68-73.5%, putting trail-3 at 71.2-73.0; 71.9 or higher (286 passes) sets a new best, about a 35% chance. Paired SE against e64 is 1.4-2.6. I give the collapse signature a 5% chance. Training replays e65's prompts: reward 0.64-0.75, pass 63-74%, partial 3-8.5%, no-submit 19-33%, wrong 3.5-10%, zero-groups 64-80%, truncation 2.5-8.5%, tokens 1650-1900, tools 9.4-10.2. By pool: easy pass 81-91%, hard pass 44-59%; rested hard tasks 70-88, rested easy tasks 85-103. u2 clip ratio under 0.001, grad norm 0.012-0.04, load errors under 1.5%.
+
+**Would change its mind if.** If e66 is 286 passes (71.9) or higher, I continue. If e66 is 284-285 with no trigger, I also continue: the next window then needs no more than a fresh draw would. If e66 falls below 284, I revert to e64 again at this same config, which still needs 286. If the signature appears (no-submit under 15% with wrong above 25%), no-submit exceeds 35%, or truncation exceeds 13%, I revert to e64 at 1e-05. I do not retry hard_share above 0.5, rates above 3e-05 or temperature above 1.0.
+
+**Grade of its previous prediction.** Val in range but at the bottom, and no new best. Val 70.1 fell inside the predicted 69.5-75 and trail-3 71.9 inside 71.7-73.5, but 279 passes missed the 286 line I gave a 50% chance. Paired SE 2.0 fell inside 1.2-2.4. The collapse signature (5% chance) did not appear. Misses: zero-groups 71.0% (72-88%), easy pass 85.0% (86-95%). In range: reward 0.693, pass 68.4%, partial 3.9% near its bottom edge, no-submit 27.1%, wrong 4.5%, truncation 5.4%, tokens 1780, tools 9.68, hard pass 51.7%, rested hard tasks 79, rested easy tasks 94, u2 clip 0.0002, grad norm 0.014-0.024, load errors 0.0%.
